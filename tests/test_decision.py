@@ -63,6 +63,23 @@ def test_help_request_triggers_escalation(engine):
     assert engine.escalation.level == EscalationLevel.L1
 
 
+def test_emotion_hook_fires_on_escalation_and_ack():
+    from mesa.hardware.emotions import Emotion
+
+    db = Database(":memory:")
+    seen = []
+    eng = DecisionEngine(
+        db,
+        ComplianceTracker(db),
+        EscalationMachine(db=db),
+        set_emotion=seen.append,
+    )
+    eng.process_event(Event(HELP_REQUEST, {}, ts=0))
+    eng.process_event(Event(ACKNOWLEDGE, {}, ts=1))
+    assert seen == [Emotion.ALERT, Emotion.IDLE]
+    db.close()
+
+
 def test_run_loop_drains_until_shutdown(engine):
     bus = EventBus()
     bus.publish(Event(HELP_REQUEST, {}, ts=0))

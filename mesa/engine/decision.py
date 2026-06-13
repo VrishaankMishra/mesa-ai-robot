@@ -24,6 +24,7 @@ from mesa.engine.events import (
     EventBus,
 )
 from mesa.engine.inactivity import InactivityMonitor
+from mesa.hardware.emotions import Emotion
 from mesa.vision.posture import Posture, PostureMonitor
 
 
@@ -36,6 +37,7 @@ class DecisionEngine:
         posture_monitor: PostureMonitor | None = None,
         inactivity_monitor: InactivityMonitor | None = None,
         speak: Callable[[str], None] | None = None,
+        set_emotion: Callable[[Emotion], None] | None = None,
     ):
         self.db = db
         self.compliance = compliance
@@ -43,6 +45,8 @@ class DecisionEngine:
         self.posture_monitor = posture_monitor or PostureMonitor()
         self.inactivity_monitor = inactivity_monitor or InactivityMonitor()
         self.speak = speak or (lambda _msg: None)
+        # Optional OLED face hook (HW-006); no-op if no display is wired.
+        self.set_emotion = set_emotion or (lambda _e: None)
 
     def process_event(self, event: Event) -> None:
         ts = event.ts
@@ -56,17 +60,21 @@ class DecisionEngine:
             if fall is not None:
                 self.db.log_event("possible_fall", detail=f"lying {fall.lying_seconds:.0f}s", ts=ts)
                 self.escalation.trigger("possible fall detected", ts)
+                self.set_emotion(Emotion.ALERT)
 
         elif event.type == PRESENCE_CHECK:
             inactive = self.inactivity_monitor.update(p["person_present"], ts)
             if inactive is not None:
                 self.escalation.trigger("prolonged inactivity", ts)
+                self.set_emotion(Emotion.ALERT)
 
         elif event.type == HELP_REQUEST:
             self.escalation.trigger("user requested help", ts)
+            self.set_emotion(Emotion.ALERT)
 
         elif event.type == ACKNOWLEDGE:
             self.escalation.acknowledge(ts)
+            self.set_emotion(Emotion.IDLE)
 
         # Always advance escalation timers using this event's clock.
         self.escalation.tick(ts)
