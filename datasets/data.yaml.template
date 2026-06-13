@@ -1,0 +1,17 @@
+# YOLOv8 dataset config (template).
+# Roboflow's YOLOv8 export generates the real version of this file with correct paths.
+# Keep `names` in sync with datasets/README.md and docs/capture-protocol.md.
+
+path: .
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 6
+names:
+  0: tylenol
+  1: vitamin_d
+  2: multivitamin
+  3: ibuprofen
+  4: aspirin
+  5: calcium
