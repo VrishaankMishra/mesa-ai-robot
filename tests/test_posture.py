@@ -1,0 +1,85 @@
+"""Tests for posture classification (VIS-009) and the fall trigger (VIS-010).
+
+Landmarks are normalized image coords with y increasing downward (MediaPipe convention).
+"""
+
+from mesa.vision.posture import (
+    FallEvent,
+    Posture,
+    PostureMonitor,
+    classify_posture,
+)
+
+# A person standing upright: shoulders high, hips mid, knees lower, ankles lowest,
+# all roughly in a vertical line.
+STANDING = {
+    "left_shoulder": (0.45, 0.20), "right_shoulder": (0.55, 0.20),
+    "left_hip": (0.46, 0.50), "right_hip": (0.54, 0.50),
+    "left_knee": (0.46, 0.72), "right_knee": (0.54, 0.72),
+    "left_ankle": (0.46, 0.95), "right_ankle": (0.54, 0.95),
+}
+
+# Sitting: torso still upright, but thighs horizontal -> bent knees.
+SITTING = {
+    "left_shoulder": (0.45, 0.25), "right_shoulder": (0.55, 0.25),
+    "left_hip": (0.46, 0.55), "right_hip": (0.54, 0.55),
+    "left_knee": (0.62, 0.56), "right_knee": (0.70, 0.56),
+    "left_ankle": (0.62, 0.80), "right_ankle": (0.70, 0.80),
+}
+
+# Lying: body horizontal -> shoulders and hips at similar height, spread in x.
+LYING = {
+    "left_shoulder": (0.25, 0.55), "right_shoulder": (0.25, 0.62),
+    "left_hip": (0.60, 0.56), "right_hip": (0.60, 0.63),
+    "left_knee": (0.80, 0.57), "right_knee": (0.80, 0.64),
+    "left_ankle": (0.95, 0.58), "right_ankle": (0.95, 0.65),
+}
+
+
+def test_classify_standing():
+    assert classify_posture(STANDING) == Posture.STANDING
+
+
+def test_classify_sitting():
+    assert classify_posture(SITTING) == Posture.SITTING
+
+
+def test_classify_lying():
+    assert classify_posture(LYING) == Posture.LYING
+
+
+def test_missing_torso_landmarks_is_unknown():
+    assert classify_posture({"left_knee": (0.5, 0.5)}) == Posture.UNKNOWN
+
+
+def test_upright_without_legs_defaults_standing():
+    torso_only = {
+        "left_shoulder": (0.45, 0.20), "right_shoulder": (0.55, 0.20),
+        "left_hip": (0.46, 0.50), "right_hip": (0.54, 0.50),
+    }
+    assert classify_posture(torso_only) == Posture.STANDING
+
+
+def test_monitor_fires_after_threshold():
+    m = PostureMonitor(lying_trigger_seconds=30.0)
+    assert m.update(Posture.LYING, 0.0) is None
+    assert m.update(Posture.LYING, 29.0) is None
+    event = m.update(Posture.LYING, 30.0)
+    assert isinstance(event, FallEvent)
+    assert event.lying_seconds >= 30.0
+
+
+def test_monitor_fires_only_once_per_spell():
+    m = PostureMonitor(lying_trigger_seconds=10.0)
+    m.update(Posture.LYING, 0.0)
+    assert m.update(Posture.LYING, 10.0) is not None
+    assert m.update(Posture.LYING, 15.0) is None  # already fired
+
+
+def test_monitor_resets_when_no_longer_lying():
+    m = PostureMonitor(lying_trigger_seconds=10.0)
+    m.update(Posture.LYING, 0.0)
+    assert m.update(Posture.LYING, 10.0) is not None
+    m.update(Posture.STANDING, 11.0)          # reset
+    m.update(Posture.LYING, 12.0)             # new spell
+    assert m.update(Posture.LYING, 22.0) is not None
