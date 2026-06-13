@@ -1,0 +1,37 @@
+# MeSA 2.0 configuration — all tunable thresholds live here (ticket INFRA-003).
+# Values are placeholders for Phase 0; tune them as each subsystem lands.
+
+vision:
+  camera_index: 0
+  frame_width: 640
+  frame_height: 480
+  detection_every_n_frames: 3   # run YOLO on every Nth frame; pose runs every frame
+
+detection:
+  model_path: models/best.pt
+  confidence_threshold: 0.5     # below this, a bottle is flagged "unknown / wrong medication"
+
+pose:
+  min_fps: 5
+  lying_trigger_seconds: 30     # lying longer than this fires a possible_fall event
+
+compliance:
+  absence_debounce_seconds: 3   # ignore brief occlusions (a hand passing over a bottle)
+  taken_after_absent_seconds: 10  # absent >= this, then returned => "taken" event
+
+escalation:
+  l1_wait_seconds: 60           # no response to spoken check-in => escalate to L2 (ntfy)
+  inactivity_window_seconds: 3600  # no person/motion for this long => escalation L1
+
+voice:
+  wake_word: mesa
+  stt_engine: vosk              # swappable: "vosk" | "whisper-tiny"
+  vosk_model_path: models/vosk-model-small-en-us
+
+alerts:
+  ntfy_topic: mesa-alerts-CHANGEME   # set to a private ntfy.sh topic
+  twilio_enabled: false
+
+# Medication schedule — populated in Week 3 (ENG-001).
+schedule:
+  medications: []
