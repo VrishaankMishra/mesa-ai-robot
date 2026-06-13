@@ -1,0 +1,24 @@
+# MeSA 2.0 — laptop development dependencies (Python 3.11).
+# Pin exact versions for reproducibility (ticket INFRA-001).
+# Pi-only hardware libs live in requirements-pi.txt.
+
+# --- Vision ---
+opencv-python==4.10.0.84
+ultralytics==8.2.103
+mediapipe==0.10.14
+numpy==1.26.4
+
+# --- Audio (offline STT/TTS) ---
+vosk==0.3.45
+pyttsx3==2.90
+sounddevice==0.4.7
+
+# --- Dashboard & alerts ---
+streamlit==1.38.0
+requests==2.32.3
+
+# --- Config ---
+PyYAML==6.0.2
+
+# --- Testing ---
+pytest==8.3.3
