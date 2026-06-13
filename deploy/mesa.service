@@ -1,0 +1,21 @@
+[Unit]
+# systemd unit for auto-starting MeSA on the Raspberry Pi (HW-003).
+# Install: see deploy/install_pi.sh
+Description=MeSA 2.0 Medication & Safety Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# EDIT these to match your Pi user + checkout path:
+User=pi
+WorkingDirectory=/home/pi/mesa-ai-robot
+ExecStart=/home/pi/mesa-ai-robot/.venv/bin/python /home/pi/mesa-ai-robot/main.py
+Restart=on-failure
+RestartSec=5
+# Log to the journal (view with: journalctl -u mesa -f)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
