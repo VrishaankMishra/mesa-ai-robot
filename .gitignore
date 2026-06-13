@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.tmp/
+
+# Models & data (large / generated)
+models/
+*.pt
+*.onnx
+events.db
+*.sqlite3
+
+# Datasets & captures
+datasets/
+captures/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

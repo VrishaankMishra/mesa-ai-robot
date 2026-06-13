@@ -1,0 +1,8 @@
+# MeSA 2.0 — Raspberry Pi 5 deployment dependencies.
+# Install the base deps too:  pip install -r requirements.txt -r requirements-pi.txt
+# These hardware libs only import on the Pi; keep them isolated so laptop dev/tests
+# run without them (see mesa/hardware/).
+
+gpiozero==2.0.1
+adafruit-circuitpython-pca9685==3.4.16
+adafruit-circuitpython-ssd1306==2.12.20
