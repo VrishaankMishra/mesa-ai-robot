@@ -14,3 +14,6 @@ include = ["mesa*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# Prepend the rootdir so the local source is imported, not an editable install that may
+# point at a different checkout/worktree. Keeps `pytest` and `python -m pytest` consistent.
+pythonpath = ["."]
