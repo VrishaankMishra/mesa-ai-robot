@@ -9,7 +9,7 @@ mediapipe==0.10.14
 numpy==1.26.4
 
 # --- Audio (offline STT/TTS) ---
-vosk==0.3.45
+vosk==0.3.44          # 0.3.45 has no macOS x86_64 wheel; 0.3.44 installs on Intel+ARM Macs & Linux
 pyttsx3==2.90
 sounddevice==0.4.7
 
