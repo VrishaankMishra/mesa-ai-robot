@@ -18,6 +18,27 @@ def _clamp(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, value))
 
 
+def person_center_from_pose(landmarks: dict[str, Point]) -> Point | None:
+    """Estimate the person's normalized (x, y) center from pose landmarks.
+
+    Uses the shoulder midpoint (the most stable, usually-visible anchor); falls back to the
+    nose, then the hip midpoint. Returns ``None`` if none are available, which the head
+    treats as "hold position". Pure and testable — no hardware, same normalized image space
+    MediaPipe Pose produces (so ``(0.5, 0.5)`` is frame center).
+    """
+    def mid(a: str, b: str) -> Point | None:
+        if landmarks.get(a) and landmarks.get(b):
+            pa, pb = landmarks[a], landmarks[b]
+            return ((pa[0] + pb[0]) / 2.0, (pa[1] + pb[1]) / 2.0)
+        return None
+
+    return (
+        mid("left_shoulder", "right_shoulder")
+        or landmarks.get("nose")
+        or mid("left_hip", "right_hip")
+    )
+
+
 @dataclass(frozen=True)
 class PanTiltState:
     pan: float

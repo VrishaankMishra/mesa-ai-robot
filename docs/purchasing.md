@@ -4,6 +4,10 @@ A budget-conscious bill of materials for a student, chosen so every part matches
 plug we've already coded. Tick items off as you order. Prices are approximate (US, 2026) —
 check **Micro Center (St. Davids, PA)** for local pickup on the Pi bundle to save shipping.
 
+> **Buy links** verified June 2026. Amazon ASINs can rotate or go out of stock; the
+> first-party links (raspberrypi.com, adafruit.com, canakit.com) are the most durable. Match
+> the **spec**, not the exact listing — any part meeting the "Spec to buy" column works.
+
 > See [hardware-build.md](hardware-build.md) for wiring + assembly, and
 > [test-plan.md](test-plan.md) for how to verify each part once it arrives.
 
@@ -29,26 +33,28 @@ check **Micro Center (St. Davids, PA)** for local pickup on the Pi bundle to sav
 
 ## Tier 1 — Core build (all 5 graded demos: detection, logging, fall, voice, escalation)
 
-| ✓ | Item | Spec to buy | ~$ | Software plug it feeds |
-|---|------|-------------|----|------------------------|
-| ☐ | Raspberry Pi 5 **8GB** | 4GB (~$60) works but tight | 80 | whole stack / systemd |
-| ☐ | Official 27W USB-C PSU | genuine PD | 12 | power |
-| ☐ | microSD 64GB **A2** | SanDisk Extreme / Samsung Evo+ | 13 | OS |
-| ☐ | Active cooler | official Pi 5 cooler | 7 | thermals |
-| ☐ | USB webcam 1080p | **UVC**; Logitech C920 ideal, or any $25–30 UVC cam | 28–50 | `mesa/vision/detector.py`, `scripts/pose_live.py` |
-| ☐ | USB speakerphone *(mic + speaker)* | USB Audio Class; or split: USB mic ~$12 + USB speaker ~$13 | 25–30 | `mesa/audio/stt.py` (Vosk) + `mesa/audio/tts.py` |
-| | **Tier 1 subtotal** | | **~$165–192** | |
+| ✓ | Item | Spec to buy | ~$ | Software plug it feeds | Buy link |
+|---|------|-------------|----|------------------------|----------|
+| ☐ | Raspberry Pi 5 **8GB** | 4GB (~$60) works but tight | 80 | whole stack / systemd | [raspberrypi.com](https://www.raspberrypi.com/products/raspberry-pi-5/) · [CanaKit board](https://www.canakit.com/raspberry-pi-5-8gb.html) |
+| ☐ | Official 27W USB-C PSU | genuine PD | 12 | power | [CanaKit](https://www.canakit.com/official-raspberry-pi-5-power-supply-27w-usb-c.html) |
+| ☐ | microSD 64GB **A2** | SanDisk Extreme / Samsung Evo+ | 13 | OS | [SanDisk Extreme 64GB A2](https://www.amazon.com/SanDisk-Extreme-microSD-UHS-I-Adapter/dp/B07FCMBLV6) |
+| ☐ | Active cooler | official Pi 5 cooler | 7 | thermals | included in kits ↓, or raspberrypi.com |
+| ☐ | USB webcam 1080p | **UVC**; Logitech C920 ideal, or any $25–30 UVC cam | 28–50 | `mesa/vision/detector.py`, `scripts/pose_live.py` | [Logitech C920S](https://www.amazon.com/Logitech-C920S-Pro-HD-Webcam/dp/B07K986YLL) |
+| ☐ | USB speakerphone *(mic + speaker)* | USB Audio Class; or split: USB mic ~$12 + USB speaker ~$13 | 25–30 | `mesa/audio/stt.py` (Vosk) + `mesa/audio/tts.py` | [USB speakerphone](https://www.amazon.com/Microphone-Speaker-Business-Conference-Speakerphone/dp/B078RJK4FW) |
+| | **Tier 1 subtotal** | | **~$165–192** | | |
+
+> **One-box bundle** (covers the Pi + PSU + cooler + microSD rows): [CanaKit Pi 5 Starter Kit PRO – 8GB](https://www.amazon.com/CanaKit-Raspberry-Starter-Kit-PRO/dp/B0CRSNCJ6Y) or [Vemico Pi 5 8GB kit](https://www.amazon.com/Vemico-Raspberry-Active-Screwdriver-Included/dp/B0DFMNHL62).
 
 ## Tier 2 — Robotics personality add-on (Week 8: head tracking + OLED face)
 
-| ✓ | Item | Spec to buy | ~$ | Software plug it feeds |
-|---|------|-------------|----|------------------------|
-| ☐ | Pan-tilt kit **with 2× servos** | MG90S (metal gear) preferred over SG90 | 13 | `PanTiltHead` (pan = ch0, tilt = ch1) |
-| ☐ | PCA9685 16-ch driver | generic I²C, 0x40 | 9 | `mesa/hardware/servos.py` |
-| ☐ | OLED SSD1306 **128×64 I²C** | 0x3C, 4-pin | 7 | `mesa/hardware/oled.py` |
-| ☐ | 5V 3A supply + USB/screw breakout | separate servo power | 9 | servo V+ |
-| ☐ | Jumper wires (F-F Dupont) + small breadboard | | 6 | I²C wiring |
-| | **Tier 2 subtotal** | | **~$44** | |
+| ✓ | Item | Spec to buy | ~$ | Software plug it feeds | Buy link |
+|---|------|-------------|----|------------------------|----------|
+| ☐ | Pan-tilt kit **with 2× servos** | MG90S (metal gear) preferred over SG90 | 13 | `PanTiltHead` (pan = ch0, tilt = ch1) | [Pan-tilt kit + 2 servos](https://www.amazon.com/Compatible-Steering-Bracket-Camera-Ultrasonic/dp/B0H22GM6Z7) — *confirm servos included; else add [MG90S 2-pack](https://www.amazon.com/s?k=MG90S+servo+2+pack)* |
+| ☐ | PCA9685 16-ch driver | generic I²C, 0x40 | 9 | `mesa/hardware/servos.py` | [Adafruit #815](https://www.adafruit.com/product/815) · [Amazon](https://www.amazon.com/Adafruit-16-Channel-12-bit-Servo-Driver/dp/B00E4WEXO4) |
+| ☐ | OLED SSD1306 **128×64 I²C** | 0x3C, 4-pin | 7 | `mesa/hardware/oled.py` | [Adafruit #326](https://www.adafruit.com/product/326) |
+| ☐ | 5V 3A supply + USB/screw breakout | separate servo power | 9 | servo V+ | search "5V 3A + screw-terminal breakout" |
+| ☐ | Jumper wires (F-F Dupont) + small breadboard | | 6 | I²C wiring | generic Dupont + breadboard kit |
+| | **Tier 2 subtotal** | | **~$44** | | |
 
 **Full build: ~$210–235** (within the plan's $215–285 estimate).
 

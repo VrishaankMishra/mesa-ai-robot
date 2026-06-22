@@ -32,6 +32,31 @@ alerts:
   ntfy_topic: mesa-alerts-CHANGEME   # set to a private ntfy.sh topic
   twilio_enabled: false
 
+# Hardware outputs — OLED face + pan/tilt head (HW-005/006).
+# enabled=false uses Null drivers so laptop dev/tests run with no hardware; the Pi service
+# sets enabled=true. The factories fall back to Null if the libraries/bus aren't present,
+# so true is always safe to try. See mesa/hardware/.
+hardware:
+  enabled: false
+  pan_channel: 0
+  tilt_channel: 1
+  track_gain: 40.0      # proportional gain: normalized error -> degrees
+  track_deadzone: 0.05  # ignore errors smaller than this (anti-jitter)
+  track_max_step: 4.0   # max degrees moved per update (anti-oscillation)
+  invert_pan: false
+  invert_tilt: false
+
+# Research extension — pre-event feature capture (DATA-001/RES-001).
+# Off by default so the build/demos carry zero overhead. See docs/research-dataset-design.md.
+research:
+  enabled: false              # master switch; when off, no capture layer runs
+  clips_dir: data/clips       # where .npz clips are written (git-ignored)
+  buffer_seconds: 6           # ring-buffer length; >= max sweep window so N is chosen offline
+  max_bottles: 5              # K: object-array slots per frame
+  capture_hands: false        # RES-002 toggle; records FPS impact when on
+  persist_video: false        # debug only, consented Tier-1; never released
+  negative_guard_factor: 2    # clean-negative guard band = factor x N
+
 # Medication schedule — populated in Week 3 (ENG-001).
 schedule:
   medications: []

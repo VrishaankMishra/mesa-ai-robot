@@ -43,13 +43,29 @@ docs/      IMPLEMENTATION.md, capture-protocol.md, roboflow-setup.md, hardware-b
 ```
 
 ## Quick start (laptop, no hardware)
+
+Works the same on **Intel macOS, Apple Silicon (M-series) macOS, and Linux**. Requires
+**Python 3.11 or 3.12** — *not 3.13* (the pinned mediapipe has no 3.13 wheel). The setup
+script picks a compatible interpreter and fails clearly if none is installed:
+
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/pip install -e .          # makes `mesa` importable + scripts runnable
+bash scripts/setup_env.sh           # creates .venv (3.11/3.12), installs the stack, verifies imports
 .venv/bin/python -m pytest          # all tests green
 .venv/bin/python main.py --demo     # runs a synthetic event sequence end-to-end
 ```
+
+<details><summary>Manual steps (if you'd rather not use the script)</summary>
+
+```bash
+python3.12 -m venv .venv            # or python3.11 — NOT python3.13
+.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -e .          # makes `mesa` importable + scripts runnable
+.venv/bin/python -m pytest
+.venv/bin/python main.py --demo
+```
+macOS: grant camera/mic permission when prompted (System Settings → Privacy & Security);
+`brew install portaudio` if the audio backend isn't found.
+</details>
 
 ## Running for real
 | What | Command | Needs |

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "mesa-ai-robot"
 version = "0.1.0"
 description = "MeSA 2.0 — Medication & Safety Assistant Robot (assistive aid, not a medical device)"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"   # pinned mediapipe (0.10.14) has no 3.13 wheel
 
 [tool.setuptools.packages.find]
 include = ["mesa*"]
@@ -14,3 +14,6 @@ include = ["mesa*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# Prepend the rootdir so the local source is imported, not an editable install that may
+# point at a different checkout/worktree. Keeps `pytest` and `python -m pytest` consistent.
+pythonpath = ["."]
