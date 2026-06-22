@@ -21,6 +21,9 @@ datasets/*
 !datasets/data.yaml.template
 captures/
 
+# Research capture clips (features-only .npz; never commit raw collected data)
+data/clips/
+
 # OS / editor
 .DS_Store
 .vscode/

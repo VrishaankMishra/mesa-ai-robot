@@ -32,6 +32,17 @@ alerts:
   ntfy_topic: mesa-alerts-CHANGEME   # set to a private ntfy.sh topic
   twilio_enabled: false
 
+# Research extension — pre-event feature capture (DATA-001/RES-001).
+# Off by default so the build/demos carry zero overhead. See docs/research-dataset-design.md.
+research:
+  enabled: false              # master switch; when off, no capture layer runs
+  clips_dir: data/clips       # where .npz clips are written (git-ignored)
+  buffer_seconds: 6           # ring-buffer length; >= max sweep window so N is chosen offline
+  max_bottles: 5              # K: object-array slots per frame
+  capture_hands: false        # RES-002 toggle; records FPS impact when on
+  persist_video: false        # debug only, consented Tier-1; never released
+  negative_guard_factor: 2    # clean-negative guard band = factor x N
+
 # Medication schedule — populated in Week 3 (ENG-001).
 schedule:
   medications: []
