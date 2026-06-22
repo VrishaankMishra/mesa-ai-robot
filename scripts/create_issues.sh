@@ -16,6 +16,7 @@ create_label engine "0e8a16" "Decision engine, state machines, DB"
 create_label hw     "b60205" "Hardware / Raspberry Pi"
 create_label infra  "fbca04" "Tooling, environment, config"
 create_label docs   "c5def5" "Docs, demos, write-ups"
+create_label research "d4c5f9" "Dataset capture + intent-prediction research (DATA-/RES-)"
 
 echo "==> Creating milestones (M1..M10)"
 create_milestone() { # $1 title  $2 due (YYYY-MM-DD)
@@ -31,6 +32,7 @@ create_milestone "M7 Full stack on Pi"            2026-08-02
 create_milestone "M8 Servo head + OLED"           2026-08-09
 create_milestone "M9 Hardened + 1 stretch"        2026-08-16
 create_milestone "M10 Showcase package"           2026-08-23
+create_milestone "M11 Research v1 (post-project)"  2026-09-30
 
 echo "==> Creating issues"
 mk() { # $1 title  $2 labels  $3 milestone  $4 body
@@ -136,5 +138,40 @@ mk "DOC-003 Project abstract + poster draft" docs "M10 Showcase package" \
   "1-page abstract (problem, system, results, impact) for science fair / applications. (est 3h)"
 mk "ENG-008 Dress rehearsal" engine "M10 Showcase package" \
   "Full scripted demo run twice without intervention; fallback recorded video ready. (est 2h)"
+
+# --- Research extension (DATA-/RES-) — see docs/research-dataset-design.md and
+#     MeSA-2_0-Research-Extension-Plan.pdf. Milestones follow Extension-Plan §6. ---
+
+# Rides on Weeks 1-2 capture work (design features-not-video in from the start)
+mk "DATA-001 Pose/landmark feature logging" research "M1 Dataset v1" \
+  "Per-frame pose (33 x x,y,z,visibility) + detection features (bbox/class/conf) serialized to a documented schema; raw 33-landmark MediaPipe output tapped before posture classification; no raw video persisted by default; behind research.enabled flag. See docs/research-dataset-design.md §3.1. (est 3h)"
+
+# Rides on Week 3 compliance & DB work
+mk "RES-001 Rolling pre-event buffer" research "M3 Compliance logging" \
+  "Ring buffer of last N s of features (buffer 6s; sweep 1-5s offline); on ENG-003 taken event, dump the pre-event window as one labeled .npz clip with metadata + anchor_event_id. (est 3h)"
+mk "DATA-002 Consent + session metadata schema" research "M3 Compliance logging" \
+  "sessions table: session id, pseudonymous participant id, consent flag/version, tier, conditions; every clip linked to a session; Tier>=2 requires consent_flag=1. (est 2h)"
+mk "DATA-003 Label-review view (Streamlit)" research "M3 Compliance logging" \
+  "Reviewer can scrub clips, see auto-label, confirm/relabel/discard (clips.review_status lifecycle); bolts onto the existing DASH-001 dashboard. (est 3h)"
+
+# Rides on Week 5 MediaPipe Pose work
+mk "RES-002 MediaPipe Hands integration (optional)" research "M5 Fall detection + Pi alive" \
+  "Hand landmarks (21/hand) added to the feature stream alongside Pose; toggled via research.capture_hands in config.yaml; FPS impact recorded; gated so it can't jeopardize the fall-detection demo. (est 3h)"
+
+# Stretch goal (Week 9) — replaces a generic STRETCH option
+mk "RES-003 Baseline predictors" research "M9 Hardened + 1 stretch" \
+  "Rule-based (wrist->nearest-bottle) + ST-GCN trained on collected clips; training notebook in repo; Task A (engagement) + Task B (object) metrics reported. See docs/research-dataset-design.md §5. (est 5h)"
+mk "RES-004 Evaluation + lead-time analysis" research "M9 Hardened + 1 stretch" \
+  "Lead-time curves (accuracy vs seconds-before-contact, swept over N), confusion matrix, failure cases committed to /docs; reproducible from a script; positioned against CAD-120 1/3/10s numbers. (est 3h)"
+
+# Packaging (Week 10)
+mk "DATA-004 Dataset packaging + datasheet" research "M10 Showcase package" \
+  "Versioned features-only release, README + 'datasheet for datasets' doc (seeded by docs/research-dataset-design.md), license, train/val/test split assigned by session. (est 3h)"
+
+# Post-project research milestone
+mk "RES-005 Ethics/IRB scoping for Tier 2-3 collection" research "M11 Research v1 (post-project)" \
+  "Determine ethics route (school/competition IRB vs lightweight consent); consent forms drafted; start inquiry early (~Week 3-4 lead time). Tier-1 self-data needs none but carries no authenticity claim. (est 3h)"
+mk "RES-006 Tier-2 multi-participant collection" research "M11 Research v1 (post-project)" \
+  "Run a consented, multi-participant session; clips accumulate automatically through the capture instrument; satisfies DATA-DONE in the Research Definition of Done. (est 5h)"
 
 echo "==> Done. Issues board created."

@@ -25,10 +25,12 @@ from mesa.engine.events import (
     Event,
 )
 from mesa.engine.inactivity import InactivityMonitor
+from mesa.hardware.oled import face_for
+from mesa.hardware.outputs import build_output_hub
 from mesa.vision.posture import Posture, PostureMonitor
 
 
-def build_engine(db: Database, cfg: dict, speak=None) -> DecisionEngine:
+def build_engine(db: Database, cfg: dict, speak=None, set_emotion=None) -> DecisionEngine:
     compliance = ComplianceTracker(
         db,
         debounce_seconds=get(cfg, "compliance.absence_debounce_seconds", 3),
@@ -48,10 +50,11 @@ def build_engine(db: Database, cfg: dict, speak=None) -> DecisionEngine:
         posture_monitor=PostureMonitor(get(cfg, "pose.lying_trigger_seconds", 30)),
         inactivity_monitor=InactivityMonitor(get(cfg, "escalation.inactivity_window_seconds", 3600)),
         speak=speak,
+        set_emotion=set_emotion,
     )
 
 
-def _demo(engine: DecisionEngine) -> None:
+def _demo(engine: DecisionEngine, hub=None) -> None:
     print("\n--- demo: synthetic event sequence ---")
     # Bottle removed then returned after 12s -> 'taken' event.
     engine.process_event(Event(BOTTLE_OBSERVATION, {"med_name": "tylenol", "present": False}, ts=0))
@@ -63,9 +66,13 @@ def _demo(engine: DecisionEngine) -> None:
     engine.process_event(Event(POSTURE, {"posture": Posture.LYING}, ts=131))
     engine.process_event(Event(POSTURE, {"posture": Posture.LYING}, ts=200))
     print(f"escalation level after no response: {engine.escalation.level.value}")
+    if hub is not None:  # OLED face followed the fall into ALERT (Null display on laptop)
+        print(f"OLED face on alert: {hub.emotions.current.value} {face_for(hub.emotions.current)}")
     # User responds.
     engine.process_event(Event(ACKNOWLEDGE, {}, ts=205))
     print(f"escalation level after acknowledge: {engine.escalation.level.value}")
+    if hub is not None:
+        print(f"OLED face after acknowledge: {hub.emotions.current.value} {face_for(hub.emotions.current)}")
     print("events logged:", [(e["type"], e["med_name"], e["detail"]) for e in engine.db.get_events()])
 
 
@@ -77,13 +84,16 @@ def main() -> None:
     cfg = load_config()
     print(f"MeSA {__version__} — orchestrator ready.")
     db = Database(":memory:" if args.demo else "events.db")
-    engine = build_engine(db, cfg)
+    # Output hub (OLED face + pan/tilt head); Null drivers on a laptop, real on the Pi.
+    hub = build_output_hub(cfg)
+    engine = build_engine(db, cfg, set_emotion=hub.on_emotion)
 
     if args.demo:
-        _demo(engine)
+        _demo(engine, hub)
     else:
         print("Vision/audio workers need a camera + mic; start them to publish events.")
         print("See docs/IMPLEMENTATION.md (Week 6, ENG-004). Try: python main.py --demo")
+    hub.close()
     db.close()
 
 
