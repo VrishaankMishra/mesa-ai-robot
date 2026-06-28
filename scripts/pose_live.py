@@ -39,21 +39,26 @@ def main() -> int:
                    help="no display window; print posture transitions (for SSH / CI)")
     p.add_argument("--seconds", type=float, default=None,
                    help="run for this many seconds then exit (default: until 'q')")
+    p.add_argument("--lying-trigger", type=float, default=None,
+                   help="override pose.lying_trigger_seconds (handy for demos)")
     args = p.parse_args()
-    trigger = get(cfg, "pose.lying_trigger_seconds", 30)
+    trigger = args.lying_trigger if args.lying_trigger is not None \
+        else get(cfg, "pose.lying_trigger_seconds", 30)
     window = get(cfg, "pose.smoothing_window", 15)
     min_vis = get(cfg, "pose.min_landmark_visibility", 0.5)
+    grace = get(cfg, "pose.lying_gap_grace_seconds", 5)
+    complexity = get(cfg, "pose.model_complexity", 1)
 
     import time
 
     import cv2
     import mediapipe as mp
 
-    pose = mp.solutions.pose.Pose(model_complexity=0)
+    pose = mp.solutions.pose.Pose(model_complexity=complexity)
     cap = cv2.VideoCapture(args.camera)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, get(cfg, "vision.frame_width", 640))
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, get(cfg, "vision.frame_height", 480))
-    monitor = PostureMonitor(lying_trigger_seconds=trigger)
+    monitor = PostureMonitor(lying_trigger_seconds=trigger, gap_grace_seconds=grace)
     smoother = PostureSmoother(window=window)
 
     start = time.time()

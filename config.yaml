@@ -16,6 +16,8 @@ pose:
   lying_trigger_seconds: 30     # lying longer than this fires a possible_fall event
   smoothing_window: 15          # frames of majority-vote smoothing to de-flicker posture labels
   min_landmark_visibility: 0.5  # ignore leg landmarks below this confidence (don't trust off-screen legs)
+  lying_gap_grace_seconds: 5    # a detection dropout (UNKNOWN) shorter than this won't cancel a lying spell
+  model_complexity: 1           # MediaPipe Pose model: 0=fastest, 1=balanced (better at lying poses), 2=most accurate
 
 compliance:
   absence_debounce_seconds: 3   # ignore brief occlusions (a hand passing over a bottle)
