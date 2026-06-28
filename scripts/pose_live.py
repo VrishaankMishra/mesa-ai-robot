@@ -41,7 +41,7 @@ def main() -> int:
                    help="run for this many seconds then exit (default: until 'q')")
     args = p.parse_args()
     trigger = get(cfg, "pose.lying_trigger_seconds", 30)
-    window = get(cfg, "pose.smoothing_window", 9)
+    window = get(cfg, "pose.smoothing_window", 15)
 
     import time
 

@@ -130,10 +130,13 @@ class PostureSmoother:
     caller feeds it whatever cadence it runs at.
     """
 
-    def __init__(self, window: int = 9):
+    def __init__(self, window: int = 15, switch_fraction: float = 0.6):
         if window < 1:
             raise ValueError("window must be >= 1")
+        if not 0.5 < switch_fraction <= 1.0:
+            raise ValueError("switch_fraction must be in (0.5, 1.0]")
         self.window = window
+        self.switch_fraction = switch_fraction
         self._buf: deque[Posture] = deque(maxlen=window)
         self._current = Posture.UNKNOWN
 
@@ -141,8 +144,12 @@ class PostureSmoother:
         """Add a raw per-frame posture, return the current smoothed posture."""
         self._buf.append(raw)
         winner, count = Counter(self._buf).most_common(1)[0]
-        # Switch only when the winner is a strict majority of the frames so far.
-        if winner != self._current and count * 2 > len(self._buf):
+        # Hysteresis: only leave the current posture when a *super*-majority of
+        # the recent window agrees on a new one. At a ~50/50 boundary neither
+        # side clears the bar, so the label holds steady instead of chattering.
+        # max(2, ...) also stops a single frame from flipping it on startup.
+        need = max(2, math.ceil(self.switch_fraction * len(self._buf)))
+        if winner != self._current and count >= need:
             self._current = winner
         return self._current
 

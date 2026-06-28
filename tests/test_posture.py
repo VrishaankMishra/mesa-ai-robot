@@ -125,6 +125,25 @@ def test_smoother_suppresses_brief_lying_spike():
     assert s.current != Posture.LYING
 
 
+def test_smoother_holds_steady_through_borderline_chatter():
+    # A ~50/50 standing/sitting boundary (the real-world flicker) must not flip
+    # the label once locked — this is the hysteresis the live test motivated.
+    import itertools
+    s = PostureSmoother(window=15, switch_fraction=0.6)
+    for _ in range(15):
+        s.update(Posture.STANDING)
+    assert s.current == Posture.STANDING
+    flips = 0
+    prev = s.current
+    seq = itertools.cycle([Posture.SITTING, Posture.STANDING])
+    for _ in range(40):
+        out = s.update(next(seq))
+        if out != prev:
+            flips += 1
+            prev = out
+    assert flips == 0
+
+
 def test_smoother_reset():
     s = PostureSmoother(window=5)
     for _ in range(5):
