@@ -115,24 +115,51 @@ class FallEvent:
 
 
 class PostureMonitor:
-    """Fires a possible_fall once a continuous lying spell exceeds the threshold (VIS-010)."""
+    """Fires a possible_fall once a sustained lying spell exceeds the threshold (VIS-010).
 
-    def __init__(self, lying_trigger_seconds: float = 30.0):
+    Tolerant of detection dropouts: MediaPipe Pose frequently loses a lying
+    person for a second or two (it's trained mostly on upright bodies), emitting
+    UNKNOWN. A momentary UNKNOWN must NOT cancel an in-progress lying spell, or
+    the timer would keep resetting and the check-in could never fire. So UNKNOWN
+    *holds* the spell — up to ``gap_grace_seconds`` since the last confirmed
+    lying frame — and only a confirmed upright posture (standing/sitting) resets
+    it. Time is injected, so it stays unit-testable.
+    """
+
+    def __init__(self, lying_trigger_seconds: float = 30.0, gap_grace_seconds: float = 5.0):
         self.lying_trigger_seconds = lying_trigger_seconds
+        self.gap_grace_seconds = gap_grace_seconds
         self._lying_since: float | None = None
+        self._last_lying_ts: float | None = None
         self._fired = False
 
     def update(self, posture: Posture, now: float) -> FallEvent | None:
-        if posture != Posture.LYING:
+        if posture == Posture.LYING:
+            if self._lying_since is None:
+                self._lying_since = now
+                self._fired = False
+            self._last_lying_ts = now
+        elif posture == Posture.UNKNOWN:
+            # Detection dropout: hold the spell unless the gap is long enough that
+            # the person has probably actually left the frame.
+            if (
+                self._lying_since is not None
+                and self._last_lying_ts is not None
+                and now - self._last_lying_ts > self.gap_grace_seconds
+            ):
+                self._lying_since = None
+                self._fired = False
+        else:  # STANDING / SITTING: confirmed upright -> reset
             self._lying_since = None
             self._fired = False
-            return None
-        if self._lying_since is None:
-            self._lying_since = now
-        elapsed = now - self._lying_since
-        if not self._fired and elapsed >= self.lying_trigger_seconds:
+
+        if (
+            self._lying_since is not None
+            and not self._fired
+            and now - self._lying_since >= self.lying_trigger_seconds
+        ):
             self._fired = True
-            return FallEvent(lying_seconds=elapsed, ts=now)
+            return FallEvent(lying_seconds=now - self._lying_since, ts=now)
         return None
 
 

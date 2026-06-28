@@ -112,6 +112,36 @@ def test_monitor_resets_when_no_longer_lying():
     assert m.update(Posture.LYING, 22.0) is not None
 
 
+def test_monitor_tolerates_brief_detection_dropout():
+    # MediaPipe blips to UNKNOWN mid-lie (real Pi failure mode); the spell must
+    # NOT reset, so the timer still accumulates and fires.
+    m = PostureMonitor(lying_trigger_seconds=10.0, gap_grace_seconds=5.0)
+    m.update(Posture.LYING, 0.0)
+    m.update(Posture.UNKNOWN, 3.0)            # 3s gap < grace -> hold
+    m.update(Posture.LYING, 6.0)
+    m.update(Posture.UNKNOWN, 8.0)            # gap from last-lying(6) = 2 -> hold
+    event = m.update(Posture.LYING, 10.0)     # spell started at 0 -> elapsed 10 -> fire
+    assert isinstance(event, FallEvent)
+
+
+def test_monitor_resets_after_long_dropout():
+    # A long UNKNOWN gap means the person likely left view -> the spell resets.
+    m = PostureMonitor(lying_trigger_seconds=10.0, gap_grace_seconds=5.0)
+    m.update(Posture.LYING, 0.0)
+    assert m.update(Posture.UNKNOWN, 7.0) is None   # gap 7 > grace 5 -> reset
+    m.update(Posture.LYING, 8.0)                     # fresh spell at 8
+    assert m.update(Posture.LYING, 12.0) is None     # 4s in (would be 12s if not reset)
+    assert m.update(Posture.LYING, 18.0) is not None # 10s into the new spell -> fire
+
+
+def test_monitor_upright_still_resets_through_grace():
+    # A *confirmed* upright posture resets immediately, even within the grace.
+    m = PostureMonitor(lying_trigger_seconds=10.0, gap_grace_seconds=5.0)
+    m.update(Posture.LYING, 0.0)
+    m.update(Posture.STANDING, 2.0)           # got up -> reset now
+    assert m.update(Posture.LYING, 9.0) is None   # new spell from 9, only ~0s in
+
+
 # --- PostureSmoother (de-flicker) -------------------------------------------
 
 def test_smoother_locks_onto_steady_posture():
