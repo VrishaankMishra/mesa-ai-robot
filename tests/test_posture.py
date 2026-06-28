@@ -7,6 +7,7 @@ from mesa.vision.posture import (
     FallEvent,
     Posture,
     PostureMonitor,
+    PostureSmoother,
     classify_posture,
 )
 
@@ -83,3 +84,66 @@ def test_monitor_resets_when_no_longer_lying():
     m.update(Posture.STANDING, 11.0)          # reset
     m.update(Posture.LYING, 12.0)             # new spell
     assert m.update(Posture.LYING, 22.0) is not None
+
+
+# --- PostureSmoother (de-flicker) -------------------------------------------
+
+def test_smoother_locks_onto_steady_posture():
+    s = PostureSmoother(window=5)
+    for _ in range(5):
+        out = s.update(Posture.STANDING)
+    assert out == Posture.STANDING
+    assert s.current == Posture.STANDING
+
+
+def test_smoother_ignores_single_frame_flicker():
+    s = PostureSmoother(window=5)
+    for _ in range(5):
+        s.update(Posture.STANDING)
+    # one stray sitting frame must not flip the reported posture
+    assert s.update(Posture.SITTING) == Posture.STANDING
+
+
+def test_smoother_switches_on_sustained_change():
+    s = PostureSmoother(window=5)
+    for _ in range(5):
+        s.update(Posture.STANDING)
+    out = None
+    for _ in range(5):
+        out = s.update(Posture.SITTING)
+    assert out == Posture.SITTING
+
+
+def test_smoother_suppresses_brief_lying_spike():
+    # The live test showed ~4 stray 'lying' frames among hundreds; those must
+    # NOT register as lying.
+    s = PostureSmoother(window=9)
+    for _ in range(9):
+        s.update(Posture.STANDING)
+    s.update(Posture.LYING)
+    s.update(Posture.LYING)
+    assert s.current != Posture.LYING
+
+
+def test_smoother_reset():
+    s = PostureSmoother(window=5)
+    for _ in range(5):
+        s.update(Posture.SITTING)
+    s.reset()
+    assert s.current == Posture.UNKNOWN
+
+
+def test_smoothed_lying_survives_flicker_and_fires_monitor():
+    """Integration: raw labels flicker but lying dominates -> smoothed stays
+    lying -> the fall timer accumulates and fires (which raw flicker would have
+    prevented by constantly resetting the monitor)."""
+    s = PostureSmoother(window=5)
+    m = PostureMonitor(lying_trigger_seconds=10.0)
+    raw_seq = [Posture.LYING, Posture.LYING, Posture.STANDING, Posture.LYING, Posture.LYING]
+    fired = None
+    for i in range(13):
+        smoothed = s.update(raw_seq[i % len(raw_seq)])
+        ev = m.update(smoothed, float(i))
+        if ev is not None:
+            fired = ev
+    assert isinstance(fired, FallEvent)
