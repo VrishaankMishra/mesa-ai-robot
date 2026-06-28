@@ -61,6 +61,32 @@ def test_upright_without_legs_defaults_standing():
     assert classify_posture(torso_only) == Posture.STANDING
 
 
+def test_low_visibility_legs_are_ignored():
+    # Knee geometry alone would say "sitting", but the legs are barely visible
+    # (the real Pi failure mode: off-screen legs at ~2% visibility). Must not
+    # fabricate sitting — fall back to standing.
+    vis = {k: 0.9 for k in SITTING}
+    for leg in ("left_knee", "left_ankle", "right_knee", "right_ankle"):
+        vis[leg] = 0.05
+    assert classify_posture(SITTING, visibility=vis, min_visibility=0.5) == Posture.STANDING
+
+
+def test_visible_legs_still_detect_sitting():
+    vis = {k: 0.9 for k in SITTING}
+    assert classify_posture(SITTING, visibility=vis, min_visibility=0.5) == Posture.SITTING
+
+
+def test_visibility_omitted_keeps_original_behavior():
+    # Backward-compat: no visibility info => trust the landmarks as before.
+    assert classify_posture(SITTING) == Posture.SITTING
+    assert classify_posture(STANDING) == Posture.STANDING
+
+
+def test_lying_detected_regardless_of_leg_visibility():
+    vis = {k: 0.01 for k in LYING}  # legs invisible, but torso says lying
+    assert classify_posture(LYING, visibility=vis, min_visibility=0.5) == Posture.LYING
+
+
 def test_monitor_fires_after_threshold():
     m = PostureMonitor(lying_trigger_seconds=30.0)
     assert m.update(Posture.LYING, 0.0) is None

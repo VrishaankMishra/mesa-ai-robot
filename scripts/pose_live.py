@@ -42,6 +42,7 @@ def main() -> int:
     args = p.parse_args()
     trigger = get(cfg, "pose.lying_trigger_seconds", 30)
     window = get(cfg, "pose.smoothing_window", 15)
+    min_vis = get(cfg, "pose.min_landmark_visibility", 0.5)
 
     import time
 
@@ -69,7 +70,8 @@ def main() -> int:
             if result.pose_landmarks:
                 lm = result.pose_landmarks.landmark
                 landmarks = {name: (lm[idx].x, lm[idx].y) for name, idx in _LANDMARK_IDS.items()}
-                raw = classify_posture(landmarks)
+                vis = {name: lm[idx].visibility for name, idx in _LANDMARK_IDS.items()}
+                raw = classify_posture(landmarks, visibility=vis, min_visibility=min_vis)
                 if not args.headless:
                     mp.solutions.drawing_utils.draw_landmarks(
                         frame, result.pose_landmarks, mp.solutions.pose.POSE_CONNECTIONS
