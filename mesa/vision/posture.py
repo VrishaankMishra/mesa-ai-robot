@@ -59,11 +59,22 @@ def _have(landmarks: Landmarks, *names: str) -> bool:
     return all(n in landmarks and landmarks[n] is not None for n in names)
 
 
-def classify_posture(landmarks: Landmarks) -> Posture:
+def classify_posture(
+    landmarks: Landmarks,
+    visibility: dict[str, float] | None = None,
+    min_visibility: float = 0.5,
+) -> Posture:
     """Classify posture from named landmarks.
 
     Expected names (any subset; more enables finer classification):
     left/right_shoulder, left/right_hip, left/right_knee, left/right_ankle.
+
+    If ``visibility`` (per-landmark confidence in 0..1, e.g. MediaPipe's
+    ``landmark.visibility``) is supplied, leg landmarks below ``min_visibility``
+    are treated as *not seen* — so an off-screen leg whose position MediaPipe is
+    merely guessing can't fabricate a bogus knee angle (and thus a false
+    "sitting"). With legs unavailable we fall back to torso-only (=> standing
+    when upright). Omitting ``visibility`` keeps the original behaviour.
     """
     if not _have(landmarks, "left_shoulder", "right_shoulder", "left_hip", "right_hip"):
         return Posture.UNKNOWN
@@ -75,13 +86,24 @@ def classify_posture(landmarks: Landmarks) -> Posture:
     if _angle_from_vertical(shoulder, hip) > LYING_TORSO_ANGLE_DEG:
         return Posture.LYING
 
-    # Upright: use knee bend to separate sitting from standing (if legs are visible).
-    if _have(landmarks, "left_hip", "left_knee", "left_ankle"):
+    def _leg_usable(side: str) -> bool:
+        if not _have(landmarks, f"{side}_hip", f"{side}_knee", f"{side}_ankle"):
+            return False
+        if visibility is not None and (
+            visibility.get(f"{side}_knee", 0.0) < min_visibility
+            or visibility.get(f"{side}_ankle", 0.0) < min_visibility
+        ):
+            return False
+        return True
+
+    # Upright: use knee bend to separate sitting from standing (only if a leg is
+    # actually visible; otherwise we can't tell, so assume standing).
+    if _leg_usable("left"):
         knee_angle = _joint_angle(landmarks["left_hip"], landmarks["left_knee"], landmarks["left_ankle"])
-    elif _have(landmarks, "right_hip", "right_knee", "right_ankle"):
+    elif _leg_usable("right"):
         knee_angle = _joint_angle(landmarks["right_hip"], landmarks["right_knee"], landmarks["right_ankle"])
     else:
-        return Posture.STANDING  # upright torso, legs not visible -> assume standing
+        return Posture.STANDING  # upright torso, legs not reliably visible
 
     return Posture.SITTING if knee_angle < SITTING_KNEE_ANGLE_DEG else Posture.STANDING
 
