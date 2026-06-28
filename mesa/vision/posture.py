@@ -12,6 +12,7 @@ once lying exceeds the configured duration (VIS-010). Time is injected, so it's 
 from __future__ import annotations
 
 import math
+from collections import Counter, deque
 from dataclasses import dataclass
 from enum import Enum
 
@@ -111,3 +112,44 @@ class PostureMonitor:
             self._fired = True
             return FallEvent(lying_seconds=elapsed, ts=now)
         return None
+
+
+class PostureSmoother:
+    """Stabilizes noisy per-frame postures via a sliding-window majority vote.
+
+    :func:`classify_posture` runs independently per frame, so near a decision
+    boundary (e.g. a knee angle hovering at the sitting/standing threshold, or a
+    momentary mis-detection) the raw label chatters many times a second. Feeding
+    that flicker straight into :class:`PostureMonitor` would keep resetting the
+    lying timer, so the fall check-in could never accumulate.
+
+    This holds the last ``window`` raw labels and only changes the reported
+    posture when a strict majority of that window agrees. A single stray frame
+    (or a brief lying spike) can't flip it, and once the person is genuinely in a
+    posture for ~half the window it locks on. Pure/stateful and time-free, so the
+    caller feeds it whatever cadence it runs at.
+    """
+
+    def __init__(self, window: int = 9):
+        if window < 1:
+            raise ValueError("window must be >= 1")
+        self.window = window
+        self._buf: deque[Posture] = deque(maxlen=window)
+        self._current = Posture.UNKNOWN
+
+    def update(self, raw: Posture) -> Posture:
+        """Add a raw per-frame posture, return the current smoothed posture."""
+        self._buf.append(raw)
+        winner, count = Counter(self._buf).most_common(1)[0]
+        # Switch only when the winner is a strict majority of the frames so far.
+        if winner != self._current and count * 2 > len(self._buf):
+            self._current = winner
+        return self._current
+
+    @property
+    def current(self) -> Posture:
+        return self._current
+
+    def reset(self) -> None:
+        self._buf.clear()
+        self._current = Posture.UNKNOWN
