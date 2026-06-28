@@ -14,7 +14,7 @@ detection:
 pose:
   min_fps: 5
   lying_trigger_seconds: 30     # lying longer than this fires a possible_fall event
-  smoothing_window: 9           # frames of majority-vote smoothing to de-flicker posture labels
+  smoothing_window: 15          # frames of majority-vote smoothing to de-flicker posture labels
 
 compliance:
   absence_debounce_seconds: 3   # ignore brief occlusions (a hand passing over a bottle)
