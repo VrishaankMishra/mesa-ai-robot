@@ -70,3 +70,20 @@ def test_strip_wake_word():
     assert strip_wake_word("MeSA, what time is it", "mesa") == "what time is it"
     assert strip_wake_word("mesa next med", "mesa") == "next med"
     assert strip_wake_word("what time is it", "mesa") == "what time is it"
+
+
+@pytest.mark.parametrize("phrase", ["i'm okay", "im ok", "i'm fine thanks", "all good",
+                                    "no problem", "never mind", "i don't need help",
+                                    "i don't need anything", "yes i'm up"])
+def test_okay_intent(phrase):
+    assert parse_intent(phrase).intent == Intent.OKAY
+
+
+def test_negated_help_does_not_trigger_help():
+    # "I don't need help" must never fire the safety alert path.
+    assert parse_intent("i don't need help").intent is not Intent.HELP
+
+
+def test_affirmative_help_still_wins_over_okay_words():
+    # Safety first: an actual call for help beats an okay-sounding phrase around it.
+    assert parse_intent("i'm fine but please call for help").intent == Intent.HELP
