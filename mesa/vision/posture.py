@@ -12,6 +12,7 @@ once lying exceeds the configured duration (VIS-010). Time is injected, so it's 
 from __future__ import annotations
 
 import math
+from collections import Counter, deque
 from dataclasses import dataclass
 from enum import Enum
 
@@ -58,11 +59,22 @@ def _have(landmarks: Landmarks, *names: str) -> bool:
     return all(n in landmarks and landmarks[n] is not None for n in names)
 
 
-def classify_posture(landmarks: Landmarks) -> Posture:
+def classify_posture(
+    landmarks: Landmarks,
+    visibility: dict[str, float] | None = None,
+    min_visibility: float = 0.5,
+) -> Posture:
     """Classify posture from named landmarks.
 
     Expected names (any subset; more enables finer classification):
     left/right_shoulder, left/right_hip, left/right_knee, left/right_ankle.
+
+    If ``visibility`` (per-landmark confidence in 0..1, e.g. MediaPipe's
+    ``landmark.visibility``) is supplied, leg landmarks below ``min_visibility``
+    are treated as *not seen* — so an off-screen leg whose position MediaPipe is
+    merely guessing can't fabricate a bogus knee angle (and thus a false
+    "sitting"). With legs unavailable we fall back to torso-only (=> standing
+    when upright). Omitting ``visibility`` keeps the original behaviour.
     """
     if not _have(landmarks, "left_shoulder", "right_shoulder", "left_hip", "right_hip"):
         return Posture.UNKNOWN
@@ -74,13 +86,24 @@ def classify_posture(landmarks: Landmarks) -> Posture:
     if _angle_from_vertical(shoulder, hip) > LYING_TORSO_ANGLE_DEG:
         return Posture.LYING
 
-    # Upright: use knee bend to separate sitting from standing (if legs are visible).
-    if _have(landmarks, "left_hip", "left_knee", "left_ankle"):
+    def _leg_usable(side: str) -> bool:
+        if not _have(landmarks, f"{side}_hip", f"{side}_knee", f"{side}_ankle"):
+            return False
+        if visibility is not None and (
+            visibility.get(f"{side}_knee", 0.0) < min_visibility
+            or visibility.get(f"{side}_ankle", 0.0) < min_visibility
+        ):
+            return False
+        return True
+
+    # Upright: use knee bend to separate sitting from standing (only if a leg is
+    # actually visible; otherwise we can't tell, so assume standing).
+    if _leg_usable("left"):
         knee_angle = _joint_angle(landmarks["left_hip"], landmarks["left_knee"], landmarks["left_ankle"])
-    elif _have(landmarks, "right_hip", "right_knee", "right_ankle"):
+    elif _leg_usable("right"):
         knee_angle = _joint_angle(landmarks["right_hip"], landmarks["right_knee"], landmarks["right_ankle"])
     else:
-        return Posture.STANDING  # upright torso, legs not visible -> assume standing
+        return Posture.STANDING  # upright torso, legs not reliably visible
 
     return Posture.SITTING if knee_angle < SITTING_KNEE_ANGLE_DEG else Posture.STANDING
 
@@ -92,22 +115,97 @@ class FallEvent:
 
 
 class PostureMonitor:
-    """Fires a possible_fall once a continuous lying spell exceeds the threshold (VIS-010)."""
+    """Fires a possible_fall once a sustained lying spell exceeds the threshold (VIS-010).
 
-    def __init__(self, lying_trigger_seconds: float = 30.0):
+    Tolerant of detection dropouts: MediaPipe Pose frequently loses a lying
+    person for a second or two (it's trained mostly on upright bodies), emitting
+    UNKNOWN. A momentary UNKNOWN must NOT cancel an in-progress lying spell, or
+    the timer would keep resetting and the check-in could never fire. So UNKNOWN
+    *holds* the spell — up to ``gap_grace_seconds`` since the last confirmed
+    lying frame — and only a confirmed upright posture (standing/sitting) resets
+    it. Time is injected, so it stays unit-testable.
+    """
+
+    def __init__(self, lying_trigger_seconds: float = 30.0, gap_grace_seconds: float = 5.0):
         self.lying_trigger_seconds = lying_trigger_seconds
+        self.gap_grace_seconds = gap_grace_seconds
         self._lying_since: float | None = None
+        self._last_lying_ts: float | None = None
         self._fired = False
 
     def update(self, posture: Posture, now: float) -> FallEvent | None:
-        if posture != Posture.LYING:
+        if posture == Posture.LYING:
+            if self._lying_since is None:
+                self._lying_since = now
+                self._fired = False
+            self._last_lying_ts = now
+        elif posture == Posture.UNKNOWN:
+            # Detection dropout: hold the spell unless the gap is long enough that
+            # the person has probably actually left the frame.
+            if (
+                self._lying_since is not None
+                and self._last_lying_ts is not None
+                and now - self._last_lying_ts > self.gap_grace_seconds
+            ):
+                self._lying_since = None
+                self._fired = False
+        else:  # STANDING / SITTING: confirmed upright -> reset
             self._lying_since = None
             self._fired = False
-            return None
-        if self._lying_since is None:
-            self._lying_since = now
-        elapsed = now - self._lying_since
-        if not self._fired and elapsed >= self.lying_trigger_seconds:
+
+        if (
+            self._lying_since is not None
+            and not self._fired
+            and now - self._lying_since >= self.lying_trigger_seconds
+        ):
             self._fired = True
-            return FallEvent(lying_seconds=elapsed, ts=now)
+            return FallEvent(lying_seconds=now - self._lying_since, ts=now)
         return None
+
+
+class PostureSmoother:
+    """Stabilizes noisy per-frame postures via a sliding-window majority vote.
+
+    :func:`classify_posture` runs independently per frame, so near a decision
+    boundary (e.g. a knee angle hovering at the sitting/standing threshold, or a
+    momentary mis-detection) the raw label chatters many times a second. Feeding
+    that flicker straight into :class:`PostureMonitor` would keep resetting the
+    lying timer, so the fall check-in could never accumulate.
+
+    This holds the last ``window`` raw labels and only changes the reported
+    posture when a strict majority of that window agrees. A single stray frame
+    (or a brief lying spike) can't flip it, and once the person is genuinely in a
+    posture for ~half the window it locks on. Pure/stateful and time-free, so the
+    caller feeds it whatever cadence it runs at.
+    """
+
+    def __init__(self, window: int = 15, switch_fraction: float = 0.6):
+        if window < 1:
+            raise ValueError("window must be >= 1")
+        if not 0.5 < switch_fraction <= 1.0:
+            raise ValueError("switch_fraction must be in (0.5, 1.0]")
+        self.window = window
+        self.switch_fraction = switch_fraction
+        self._buf: deque[Posture] = deque(maxlen=window)
+        self._current = Posture.UNKNOWN
+
+    def update(self, raw: Posture) -> Posture:
+        """Add a raw per-frame posture, return the current smoothed posture."""
+        self._buf.append(raw)
+        winner, count = Counter(self._buf).most_common(1)[0]
+        # Hysteresis: only leave the current posture when a *super*-majority of
+        # the recent window agrees on a new one. At a ~50/50 boundary neither
+        # side clears the bar, so the label holds steady instead of chattering.
+        # max(2, ...) also stops a single frame from flipping it on startup.
+        need = max(2, math.ceil(self.switch_fraction * len(self._buf)))
+        if winner != self._current and count >= need:
+            self._current = winner
+        return self._current
+
+    @property
+    def current(self) -> Posture:
+        return self._current
+
+    def reset(self) -> None:
+        self._buf.clear()
+        self._current = Posture.UNKNOWN
