@@ -7,11 +7,13 @@ train: train/images
 val: valid/images
 test: test/images
 
-nc: 6
+nc: 8
 names:
-  0: tylenol
-  1: vitamin_d
-  2: multivitamin
-  3: ibuprofen
-  4: aspirin
-  5: calcium
+  0: mylanta
+  1: vitamin_d3
+  2: bayer_aspirin
+  3: cvs_allergy
+  4: omeprazole
+  5: melatonin
+  6: ashwagandha
+  7: advil
