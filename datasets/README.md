@@ -6,7 +6,7 @@ gitignored). This README is the placeholder describing the expected structure.
 ## Capture (VIS-002)
 Raw photos go under `datasets/raw/<bottle>/`, named by the capture helper:
 ```
-datasets/raw/tylenol/tylenol__bright__a0__d05__0007.jpg
+datasets/raw/advil/advil__bright__a0__d06__0007_173015042.jpg
 ```
 See `docs/capture-protocol.md` for the coverage matrix (3 lighting × 3 angles × 3 distances).
 
@@ -27,9 +27,11 @@ Keep class ids in sync everywhere (this README, `data.yaml`, `docs/capture-proto
 
 | id | label |
 |----|-------|
-| 0 | tylenol |
-| 1 | vitamin_d |
-| 2 | multivitamin |
-| 3 | ibuprofen |
-| 4 | aspirin |
-| 5 | calcium |
+| 0 | mylanta |
+| 1 | vitamin_d3 |
+| 2 | bayer_aspirin |
+| 3 | cvs_allergy |
+| 4 | omeprazole |
+| 5 | melatonin |
+| 6 | ashwagandha |
+| 7 | advil |

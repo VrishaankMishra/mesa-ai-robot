@@ -6,6 +6,7 @@ vision:
   frame_width: 640
   frame_height: 480
   detection_every_n_frames: 3   # run YOLO on every Nth frame; pose runs every frame
+  presence_check_seconds: 1.0   # how often the vision worker publishes person-present
 
 detection:
   model_path: models/best.pt

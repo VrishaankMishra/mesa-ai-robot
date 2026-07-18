@@ -46,6 +46,9 @@ class VoiceAssistant:
                 self.alert_fn("MeSA user requested help.")
             return "Okay, I'm calling for help now."
 
+        if parsed.intent == Intent.OKAY:
+            return "Glad to hear it. I'm here if you need anything."
+
         if parsed.intent == Intent.DATE_TIME:
             return dt.strftime("It is %A, %B %-d, and the time is %-I:%M %p.")
 

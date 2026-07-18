@@ -59,6 +59,13 @@ echo "==> installing requirements.txt (this pulls torch via ultralytics; first r
 "$VENV_PY" -m pip install -r requirements.txt
 
 if [[ "$INSTALL_PI" == "1" ]]; then
+  if command -v apt-get >/dev/null 2>&1; then
+    # sounddevice needs the system PortAudio lib; pyttsx3 2.90 dlopens the LEGACY
+    # libespeak.so.1 (libespeak1), not espeak-ng's lib — install both to be safe.
+    # None are pip-installable, so pip alone leaves audio broken at runtime.
+    echo "==> installing system audio libs (libportaudio2, espeak-ng, libespeak1)"
+    sudo apt-get install -y libportaudio2 espeak-ng libespeak1
+  fi
   echo "==> installing requirements-pi.txt (Pi hardware libs)"
   "$VENV_PY" -m pip install -r requirements-pi.txt
 fi
