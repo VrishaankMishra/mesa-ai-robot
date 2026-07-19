@@ -22,6 +22,7 @@ Landmarks = dict[str, Point]
 # Thresholds (tunable; mirror config.yaml where relevant).
 LYING_TORSO_ANGLE_DEG = 50.0   # torso more horizontal than this => lying
 SITTING_KNEE_ANGLE_DEG = 130.0  # knee bent more than this (smaller angle) => sitting
+INVERTED_TORSO_MARGIN = 0.10   # shoulders this far BELOW hips (image y) => lying
 
 
 class Posture(Enum):
@@ -81,6 +82,15 @@ def classify_posture(
 
     shoulder = _midpoint(landmarks["left_shoulder"], landmarks["right_shoulder"])
     hip = _midpoint(landmarks["left_hip"], landmarks["right_hip"])
+
+    # Inverted torso: shoulders clearly BELOW hips (image y grows downward) is
+    # impossible for an upright human. It is the signature of lying with the head
+    # toward the camera, where foreshortening makes the torso-angle test read
+    # near-vertical (measured 7.9° on a real lying frame, Jul 18). A deep forward
+    # bend can graze this margin, but sustaining it for a whole lying-trigger
+    # window is implausible, and the smoother eats momentary dips.
+    if shoulder[1] - hip[1] > INVERTED_TORSO_MARGIN:
+        return Posture.LYING
 
     # Lying: torso is more horizontal than vertical.
     if _angle_from_vertical(shoulder, hip) > LYING_TORSO_ANGLE_DEG:

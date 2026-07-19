@@ -19,15 +19,8 @@ import argparse
 
 from mesa.audio.tts import speak
 from mesa.config import get, load_config
-from mesa.vision.posture import Posture, PostureMonitor, PostureSmoother, classify_posture
-
-# MediaPipe Pose landmark indices -> our names.
-_LANDMARK_IDS = {
-    "left_shoulder": 11, "right_shoulder": 12,
-    "left_hip": 23, "right_hip": 24,
-    "left_knee": 25, "right_knee": 26,
-    "left_ankle": 27, "right_ankle": 28,
-}
+from mesa.vision.pose_estimator import PoseEstimator
+from mesa.vision.posture import PostureMonitor, PostureSmoother
 
 
 def main() -> int:
@@ -54,7 +47,7 @@ def main() -> int:
     import cv2
     import mediapipe as mp
 
-    pose = mp.solutions.pose.Pose(model_complexity=complexity)
+    estimator = PoseEstimator(model_complexity=complexity, min_visibility=min_vis)
     cap = cv2.VideoCapture(args.camera)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, get(cfg, "vision.frame_width", 640))
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, get(cfg, "vision.frame_height", 480))
@@ -63,6 +56,7 @@ def main() -> int:
 
     start = time.time()
     frames = 0
+    rot_frames = 0
     last_printed = None
     try:
         while cap.isOpened():
@@ -70,20 +64,16 @@ def main() -> int:
             if not ok:
                 break
             frames += 1
-            result = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            raw = Posture.UNKNOWN
-            if result.pose_landmarks:
-                lm = result.pose_landmarks.landmark
-                landmarks = {name: (lm[idx].x, lm[idx].y) for name, idx in _LANDMARK_IDS.items()}
-                vis = {name: lm[idx].visibility for name, idx in _LANDMARK_IDS.items()}
-                raw = classify_posture(landmarks, visibility=vis, min_visibility=min_vis)
-                if not args.headless:
-                    mp.solutions.drawing_utils.draw_landmarks(
-                        frame, result.pose_landmarks, mp.solutions.pose.POSE_CONNECTIONS
-                    )
+            reading = estimator.infer(frame)
+            rot_frames += reading.via_fallback
+            if not args.headless and reading.raw_result is not None:
+                mp.solutions.drawing_utils.draw_landmarks(
+                    frame, reading.raw_result.pose_landmarks,
+                    mp.solutions.pose.POSE_CONNECTIONS,
+                )
 
             # Smooth the per-frame label before it drives display + the fall timer.
-            posture = smoother.update(raw)
+            posture = smoother.update(reading.posture)
 
             now = time.time()
             event = monitor.update(posture, now)
@@ -105,13 +95,15 @@ def main() -> int:
                 break
     finally:
         cap.release()
+        estimator.close()
         if not args.headless:
             cv2.destroyAllWindows()
 
     if args.headless:
         el = time.time() - start
         if el > 0:
-            print(f"frames={frames}  fps={frames / el:.1f}")
+            print(f"frames={frames}  fps={frames / el:.1f}  "
+                  f"fallback_recovered={rot_frames}")
     return 0
 
 
