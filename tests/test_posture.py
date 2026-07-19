@@ -222,3 +222,24 @@ def test_smoothed_lying_survives_flicker_and_fires_monitor():
         if ev is not None:
             fired = ev
     assert isinstance(fired, FallEvent)
+
+
+class TestInvertedTorso:
+    """Lying with the head toward the camera: shoulders below hips in image space."""
+
+    def _landmarks(self, shoulder_y, hip_y):
+        return {
+            "left_shoulder": (0.60, shoulder_y), "right_shoulder": (0.62, shoulder_y),
+            "left_hip": (0.61, hip_y), "right_hip": (0.63, hip_y),
+        }
+
+    def test_shoulders_well_below_hips_is_lying(self):
+        # Real measured frame (Jul 18): shoulder y 0.77, hip y 0.55, torso angle 7.9deg.
+        assert classify_posture(self._landmarks(0.77, 0.55)) == Posture.LYING
+
+    def test_shoulders_marginally_below_hips_is_not_lying(self):
+        # Small dips (noise, slight lean toward camera) stay within the margin.
+        assert classify_posture(self._landmarks(0.60, 0.55)) == Posture.STANDING
+
+    def test_normal_upright_still_standing(self):
+        assert classify_posture(self._landmarks(0.30, 0.55)) == Posture.STANDING
