@@ -27,15 +27,7 @@ from mesa.engine.events import (
     EventBus,
 )
 from mesa.vision.detector import Detection, YOLODetector
-from mesa.vision.posture import Posture, PostureSmoother, classify_posture
-
-# MediaPipe Pose landmark indices -> our names (shared with scripts/pose_live.py).
-LANDMARK_IDS = {
-    "left_shoulder": 11, "right_shoulder": 12,
-    "left_hip": 23, "right_hip": 24,
-    "left_knee": 25, "right_knee": 26,
-    "left_ankle": 27, "right_ankle": 28,
-}
+from mesa.vision.posture import PostureSmoother
 
 
 def presence_map(detections: list[Detection], known_meds: set[str]) -> dict[str, bool]:
@@ -77,13 +69,14 @@ class VisionWorker(threading.Thread):
 
     def run(self) -> None:  # pragma: no cover - camera + MediaPipe hardware loop
         import cv2
-        import mediapipe as mp
 
-        pose = mp.solutions.pose.Pose(
-            model_complexity=get(self.cfg, "pose.model_complexity", 1)
+        from mesa.vision.pose_estimator import PoseEstimator
+
+        estimator = PoseEstimator(
+            model_complexity=get(self.cfg, "pose.model_complexity", 1),
+            min_visibility=get(self.cfg, "pose.min_landmark_visibility", 0.5),
         )
         smoother = PostureSmoother(window=get(self.cfg, "pose.smoothing_window", 15))
-        min_vis = get(self.cfg, "pose.min_landmark_visibility", 0.5)
 
         detector: YOLODetector | None = None
         if self.model_available:
@@ -111,15 +104,11 @@ class VisionWorker(threading.Thread):
                 frame_no += 1
                 now = time.time()
 
-                result = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                raw = Posture.UNKNOWN
-                person_present = result.pose_landmarks is not None
-                if person_present:
-                    lm = result.pose_landmarks.landmark
-                    landmarks = {n: (lm[i].x, lm[i].y) for n, i in LANDMARK_IDS.items()}
-                    vis = {n: lm[i].visibility for n, i in LANDMARK_IDS.items()}
-                    raw = classify_posture(landmarks, visibility=vis, min_visibility=min_vis)
-                self.bus.publish(Event(POSTURE, {"posture": smoother.update(raw)}, ts=now))
+                reading = estimator.infer(frame)
+                person_present = reading.person_present
+                self.bus.publish(
+                    Event(POSTURE, {"posture": smoother.update(reading.posture)}, ts=now)
+                )
 
                 if now - last_presence_ts >= self.presence_interval:
                     last_presence_ts = now
@@ -139,3 +128,4 @@ class VisionWorker(threading.Thread):
                         )
         finally:
             cap.release()
+            estimator.close()
