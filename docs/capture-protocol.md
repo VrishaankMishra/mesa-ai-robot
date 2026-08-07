@@ -84,3 +84,11 @@ Protocol learned the hard way (Jul 18 session): the table must be EMPTY except t
 announced bottle — parked bottles anywhere in frame mean unlabeled instances that poison
 training. Spares live on the floor. Hands rotating the bottle during bursts are fine
 (realistic occlusion); the final tray stage is the only multi-bottle scene.
+
+## Dataset caveat: filenames are not ground truth
+
+During the Jul 18 voice-guided capture, a few cells were shot with the WRONG bottle on the
+mark (voice-prompt mixups — e.g. "bayer" announced, mylanta placed). The Roboflow
+annotations (hand-labeled Aug 5) are the ground truth; the condition-encoded filenames
+are only *mostly* right. Never audit, split, or script against the filename's med prefix
+— go through the annotations.
