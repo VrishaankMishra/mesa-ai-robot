@@ -14,7 +14,7 @@ def test_load_default_config_has_sections():
 def test_get_dotted_key():
     cfg = load_config()
     assert get(cfg, "pose.lying_trigger_seconds") == 30
-    assert get(cfg, "detection.confidence_threshold") == 0.5
+    assert get(cfg, "detection.confidence_threshold") == 0.45
 
 
 def test_get_missing_key_returns_default():

@@ -10,7 +10,7 @@ vision:
 
 detection:
   model_path: models/best.pt
-  confidence_threshold: 0.5     # below this, a bottle is flagged "unknown / wrong medication"
+  confidence_threshold: 0.45    # below this, a bottle is flagged "unknown / wrong medication" (0.5->0.45 after Aug 7 live tuning: morning light runs ~0.1 below the evening training domain)
 
 pose:
   min_fps: 5
