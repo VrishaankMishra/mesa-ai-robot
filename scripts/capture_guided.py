@@ -30,7 +30,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = REPO_ROOT / "datasets" / "raw"
 
-LIGHTING_CHOICES = ("bright", "dim", "mixed")
+LIGHTING_CHOICES = ("bright", "dim", "mixed", "daylight")
 
 # (spoken name, angle-degrees for the filename slug). Left/right = move the bottle to
 # the side of the table so the camera sees it ~30 degrees off-axis.
