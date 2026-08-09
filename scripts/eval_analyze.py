@@ -59,6 +59,9 @@ def main() -> int:
     p.add_argument("--eval-dir", default="eval_data")
     p.add_argument("--conf", type=float, default=0.45)
     p.add_argument("--out", default="docs/eval/domain_shift_results.csv")
+    p.add_argument("--skip-first", type=int, default=1,
+                   help="frames to skip at each cell start (placement transition; "
+                        "frame 00 routinely shows the previous bottle mid-swap)")
     args = p.parse_args()
 
     from ultralytics import YOLO
@@ -90,6 +93,9 @@ def main() -> int:
             for r in rows:
                 img = sess_dir / r["filename"]
                 if not img.exists():
+                    continue
+                frame_idx = int(r["filename"].rsplit("__", 1)[1].split(".")[0])
+                if frame_idx < args.skip_first:
                     continue
                 res = model.predict(str(img), conf=0.10, verbose=False)[0]
                 dets = [(model.names[int(b.cls[0])], float(b.conf[0])) for b in res.boxes]
