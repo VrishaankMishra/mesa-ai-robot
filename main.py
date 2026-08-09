@@ -91,6 +91,22 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
     bus = EventBus()
     workers = []
 
+    # Research capture layer (DATA-002): passively records pose+detection features;
+    # every real 'taken' event self-labels its preceding seconds as a clip.
+    recorder = None
+    if get(cfg, "research.enabled", False):
+        from mesa.research.recorder import ResearchRecorder
+
+        recorder = ResearchRecorder(
+            db,
+            clips_dir=get(cfg, "research.clips_dir", "data/clips"),
+            buffer_seconds=get(cfg, "research.buffer_seconds", 6),
+            max_bottles=get(cfg, "research.max_bottles", 5),
+        )
+        engine.on_taken = recorder.on_taken
+        print(f"[live] research capture ON -> {get(cfg, 'research.clips_dir', 'data/clips')} "
+              f"(session {recorder.session_id[:8]})")
+
     # Open the camera on the main thread: macOS can only show the one-time camera
     # permission dialog here — doing it inside the worker thread aborts the process.
     import cv2
@@ -106,7 +122,8 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
         if not model_path.exists():
             print(f"[live] no trained detector at {model_path} — MED detection off, posture only.")
         workers.append(VisionWorker(bus, cfg, known_meds=known_meds,
-                                    model_available=model_path.exists(), capture=capture))
+                                    model_available=model_path.exists(), capture=capture,
+                                    recorder=recorder))
     else:
         capture.release()
         print(f"[live] camera {camera_index} unavailable — vision off "
@@ -146,6 +163,9 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
         for w in workers:
             w.stop()
         bus.shutdown()
+        if recorder is not None:
+            recorder.close()
+            print(f"[live] research clips written this run: {recorder.clips_written}")
 
 
 def main() -> None:
