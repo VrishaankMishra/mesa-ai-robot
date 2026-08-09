@@ -1,4 +1,7 @@
-# Detector Evaluation Report (VIS-005)
+# Detector Evaluation Report (VIS-005) — TEMPLATE
+
+> Filled instances live in `docs/eval/` (first: `eval-report-v1.md`, mAP@50 0.953).
+> The domain-shift study results are in `docs/eval/domain_shift_results.csv` + figures.
 
 Fill this in after each training run (`scripts/evaluate.py` produces the numbers and plots).
 M2 is met when **mAP@50 ≥ 90%** on the validation set.
