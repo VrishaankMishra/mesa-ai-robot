@@ -20,6 +20,13 @@ research instrument that measured the limits of its own vision.
 | **ESCALATE** — L1 spoken check-in → L2 push (ntfy) → L3 caregiver alert | 🟡 logic + plumbing done; live run scheduled |
 | *(Stretch)* pan-tilt head tracking, OLED emotions | coded + unit-tested; on-Pi verification pending |
 
+## Hardware tour
+
+![MeSA setup — Raspberry Pi 5, taped C920, marked station](docs/media/mesa-setup-hero.gif)
+
+*Full 90-second silent walkthrough of the rig (Pi 5, camera mount, marked medication
+station, LED lamp, speakerphone): [setup tour video](https://github.com/VrishaankMishra/mesa-ai-robot/releases/tag/setup-tour-v1).*
+
 ## The research: MeSA measures her own blind spots
 
 The detector scored 0.953 mAP@50 — then failed at 8 PM in its own room. Instead of
