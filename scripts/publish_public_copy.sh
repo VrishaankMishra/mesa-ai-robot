@@ -31,6 +31,11 @@ git -C "$SRC" fetch -q origin && git -C "$SRC" merge -q --ff-only origin/main 2>
 
 git clone -q --no-local "$SRC" "$BUILD"
 cd "$BUILD" && git checkout -q main
+# Fresh clones do NOT inherit the source repo's local git config — pin the
+# project author explicitly or new commits fall back to the machine's global
+# identity (this bit us once: the curation commit published as the wrong author).
+git config user.name  "VrishaankMishra"
+git config user.email "vrishaank.mishra@gmail.com"
 
 ARGS=(--force --invert-paths --replace-text "$REPLACEMENTS")
 for p in "${EXCLUDE_PATHS[@]}"; do ARGS+=(--path "$p"); done
