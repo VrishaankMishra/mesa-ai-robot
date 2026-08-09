@@ -1,5 +1,12 @@
 # MeSA 2.0 — Step-by-Step Implementation Plan
 
+> **STATUS (2026-08-09):** Weeks 1–6 complete and live-verified (4 of 5 core demos:
+> MED, LOG, FALL, VOICE; ESCALATE needs one live run — ntfy topic now set). A research
+> extension (domain-shift study) completed Aug 8–9: docs/eval/ + docs/paper/. Remaining:
+> ESCALATE live test, systemd + soak (HW-002/003, ENG-007), dashboard-on-LAN check
+> (DASH-002), on-Pi servo/OLED verification (HW-004–006), demo video + rehearsal
+> (Week 10). Day-by-day history: docs/engineering-notebook.md.
+
 Derived from `mesa-2_0-project-plan*.pdf`. This is the working build guide: do the steps
 in order, close each ticket only when its **acceptance criteria (AC)** are met, and commit
 on a feature branch per ticket.
@@ -44,11 +51,11 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 ## Week 1 (Jun 15–21) — Dataset & Dev Environment
 **Milestone M1: annotated dataset v1 uploaded to Roboflow.**
 
-- [ ] **INFRA-001** (2h) — Dev environment on laptop: repo cloned, venv with pinned `requirements.txt`, existing unit tests pass.
+- [x] **INFRA-001** (2h) — Dev environment on laptop: repo cloned, venv with pinned `requirements.txt`, existing unit tests pass.
 - [ ] **INFRA-002** (1h) — Create GitHub Issues board: all tickets entered with labels + milestones.
-- [ ] **VIS-001** (2h) — Capture rig + photo protocol: fixed camera position documented; lighting/angle/distance checklist written.
-- [ ] **VIS-002** (5h) — Capture ≥600 images across 6 bottles: 3 lighting conditions × 3 angles × 3 distances, incl. cluttered backgrounds.
-- [ ] **VIS-003** (3h) — Annotate in Roboflow: all images boxed + labeled; 70/20/10 train/val/test split; augmentations configured.
+- [x] **VIS-001** (2h) — Capture rig + photo protocol: fixed camera position documented; lighting/angle/distance checklist written.
+- [x] **VIS-002** (5h) — Capture ≥600 images across 6 bottles: 3 lighting conditions × 3 angles × 3 distances, incl. cluttered backgrounds.
+- [x] **VIS-003** (3h) — Annotate in Roboflow: all images boxed + labeled; 70/20/10 train/val/test split; augmentations configured.
 
 **Proof:** Roboflow project link.
 
@@ -57,9 +64,9 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 ## Week 2 (Jun 22–28) — Train & Evaluate Detector
 **Milestone M2: fine-tuned YOLOv8n ≥90% mAP@50 on val set.**
 
-- [ ] **VIS-004** (4h) — Train YOLOv8n on Colab: training notebook in repo; `best.pt` exported; ≥90% mAP@50.
-- [ ] **VIS-005** (2h) — Evaluation report: confusion matrix + per-class precision/recall committed to `/docs`; failure cases listed.
-- [ ] **VIS-006** (4h) — Live inference: `detect_live.py` shows boxes + confidence ≥5 FPS on laptop; "unknown bottle" path when confidence < threshold.
+- [x] **VIS-004** (4h) — Train YOLOv8n on Colab: training notebook in repo; `best.pt` exported; ≥90% mAP@50.
+- [x] **VIS-005** (2h) — Evaluation report: confusion matrix + per-class precision/recall committed to `/docs`; failure cases listed.
+- [x] **VIS-006** (4h) — Live inference: `detect_live.py` shows boxes + confidence ≥5 FPS on laptop; "unknown bottle" path when confidence < threshold.
 - [ ] **VIS-007** (2h) — Hard-negative round: +50 failure-case images added; retrain if mAP < 90%.
 
 **Proof:** eval report in repo.
@@ -69,10 +76,10 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 ## Week 3 (Jun 29–Jul 5) — Compliance Tracking & Database
 **Milestone M3: bottle removed/returned → event logged in SQLite.**
 
-- [ ] **ENG-001** (3h) — SQLite schema + data access module: `events`, `medications`, `schedule` tables; CRUD functions; pytest coverage.
-- [ ] **ENG-002** (4h) — Per-bottle presence state machine: `present → absent → returned`; debounced 3 s so hand occlusion doesn't false-trigger.
-- [ ] **ENG-003** (2h) — "Medication taken" rule: absent ≥10 s then returned → `taken` event with timestamp + med name.
-- [ ] **DASH-001** (3h) — Extend Streamlit dashboard: today's meds, taken/missed status, event-history table reading live from SQLite.
+- [x] **ENG-001** (3h) — SQLite schema + data access module: `events`, `medications`, `schedule` tables; CRUD functions; pytest coverage.
+- [x] **ENG-002** (4h) — Per-bottle presence state machine: `present → absent → returned`; debounced 3 s so hand occlusion doesn't false-trigger.
+- [x] **ENG-003** (2h) — "Medication taken" rule: absent ≥10 s then returned → `taken` event with timestamp + med name.
+- [x] **DASH-001** (3h) — Extend Streamlit dashboard: today's meds, taken/missed status, event-history table reading live from SQLite.
 
 > **⏰ Order the Pi 5 bundle (H1–H4) this week** so it arrives before Week 5/7.
 
@@ -83,10 +90,10 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 ## Week 4 (Jul 6–12) — Voice Assistant
 **Milestone M4: 4 voice commands working end-to-end on laptop.**
 
-- [ ] **VOX-001** (4h) — Mic capture + Vosk STT loop: continuous transcription; wake word "MeSA" gates commands.
-- [ ] **VOX-002** (3h) — Intent parser: keyword/regex intents `NEXT_MED`, `DID_I_TAKE`, `HELP`, `DATE_TIME`; unit-tested on 20 phrasings each.
-- [ ] **VOX-003** (3h) — Intent → DB → spoken answer: "Did I take Vitamin D?" answers correctly from real `events` via pyttsx3.
-- [ ] **VOX-004** (2h) — HELP intent → alert stub: "Call for help" sends an ntfy.sh push.
+- [x] **VOX-001** (4h) — Mic capture + Vosk STT loop: continuous transcription; wake word "MeSA" gates commands.
+- [x] **VOX-002** (3h) — Intent parser: keyword/regex intents `NEXT_MED`, `DID_I_TAKE`, `HELP`, `DATE_TIME`; unit-tested on 20 phrasings each.
+- [x] **VOX-003** (3h) — Intent → DB → spoken answer: "Did I take Vitamin D?" answers correctly from real `events` via pyttsx3.
+- [x] **VOX-004** (2h) — HELP intent → alert stub: "Call for help" sends an ntfy.sh push.
 
 > Keep STT behind one module so Vosk can be swapped for whisper-tiny if accuracy is poor.
 
@@ -97,10 +104,10 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 ## Week 5 (Jul 13–19) — Fall Detection + Pi Bring-up
 **Milestone M5: standing/sitting/lying classified live; Pi 5 running the detector.**
 
-- [ ] **VIS-008** (2h) — MediaPipe Pose integration: 33 keypoints rendered live ≥10 FPS (laptop).
-- [ ] **VIS-009** (5h) — Posture classifier: torso-angle + hip/shoulder-height rules classify standing/sitting/lying ≥90% accuracy on a 50-clip test set.
-- [ ] **VIS-010** (2h) — Lying-duration trigger: lying >30 s fires `possible_fall`; spoken "Are you okay?" check-in.
-- [ ] **HW-001** (3h) — Pi 5 setup: Pi OS 64-bit, SSH, camera working, repo deployed, YOLO+pose FPS benchmarked and recorded.
+- [x] **VIS-008** (2h) — MediaPipe Pose integration: 33 keypoints rendered live ≥10 FPS (laptop).
+- [x] **VIS-009** (5h) — Posture classifier: torso-angle + hip/shoulder-height rules classify standing/sitting/lying ≥90% accuracy on a 50-clip test set.
+- [x] **VIS-010** (2h) — Lying-duration trigger: lying >30 s fires `possible_fall`; spoken "Are you okay?" check-in.
+- [x] **HW-001** (3h) — Pi 5 setup: Pi OS 64-bit, SSH, camera working, repo deployed, YOLO+pose FPS benchmarked and recorded.
 
 > **⚠️ Safety:** test falls with staged poses on cushions only. Document "assistive aid, not a medical device."
 
@@ -111,10 +118,10 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 ## Week 6 (Jul 20–26) — Decision Engine Integration
 **Milestone M6: all subsystems running together from one entry point (laptop).**
 
-- [ ] **ENG-004** (5h) — Event bus + orchestrator: `main.py` launches vision, audio, engine threads; all events flow through one queue.
-- [ ] **ENG-005** (4h) — Escalation state machine: L1 check-in → 60 s no response → L2 ntfy → no response → L3 caregiver alert; fully unit-tested with simulated time.
-- [ ] **ENG-006** (2h) — Inactivity monitor: no person/motion for configurable window (default 1 h) → escalation L1.
-- [ ] **INFRA-003** (1h) — Config file: all thresholds (timeouts, confidence, schedule) in `config.yaml`.
+- [x] **ENG-004** (5h) — Event bus + orchestrator: `main.py` launches vision, audio, engine threads; all events flow through one queue.
+- [x] **ENG-005** (4h) — Escalation state machine: L1 check-in → 60 s no response → L2 ntfy → no response → L3 caregiver alert; fully unit-tested with simulated time.
+- [x] **ENG-006** (2h) — Inactivity monitor: no person/motion for configurable window (default 1 h) → escalation L1.
+- [x] **INFRA-003** (1h) — Config file: all thresholds (timeouts, confidence, schedule) in `config.yaml`.
 
 > **⏰ Order servos, PCA9685, pan-tilt kit, OLED (H8–H11)** this week.
 
@@ -150,7 +157,7 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 ## Week 9 (Aug 10–16) — Accuracy Hardening & Stretch Goals
 **Milestone M9: demo-grade reliability; one stretch goal landed.**
 
-- [ ] **VIS-011** (4h) — Detector robustness pass: test at demo-location lighting; retrain/threshold-tune until MED-DEMO criteria met.
+- [x] **VIS-011** (4h) — Detector robustness pass: test at demo-location lighting; retrain/threshold-tune until MED-DEMO criteria met.
 - [ ] **VOX-005** (3h) — Voice robustness pass: 90%+ command success at 1–2 m in normal room noise; mis-recognition fallback ("Sorry, say again?").
 - [ ] **STRETCH-001** (5h) — Pick **ONE**: schedule generator (CSV prescription list → reminder schedule) **OR** family dashboard auth view **OR** face-recognition greeting. Chosen feature demo-able.
 
