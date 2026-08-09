@@ -28,3 +28,4 @@ data/clips/
 .DS_Store
 .vscode/
 .idea/
+eval_data/
