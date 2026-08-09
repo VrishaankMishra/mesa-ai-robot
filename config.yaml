@@ -54,7 +54,7 @@ hardware:
 # Research extension — pre-event feature capture (DATA-001/RES-001).
 # Off by default so the build/demos carry zero overhead. See docs/research-dataset-design.md.
 research:
-  enabled: false              # master switch; when off, no capture layer runs
+  enabled: true               # DATA-002 live since 2026-08-10: passive self-labeling capture
   clips_dir: data/clips       # where .npz clips are written (git-ignored)
   buffer_seconds: 6           # ring-buffer length; >= max sweep window so N is chosen offline
   max_bottles: 5              # K: object-array slots per frame

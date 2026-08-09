@@ -38,6 +38,7 @@ class DecisionEngine:
         inactivity_monitor: InactivityMonitor | None = None,
         speak: Callable[[str], None] | None = None,
         set_emotion: Callable[[Emotion], None] | None = None,
+        on_taken: Callable[..., None] | None = None,
     ):
         self.db = db
         self.compliance = compliance
@@ -47,13 +48,18 @@ class DecisionEngine:
         self.speak = speak or (lambda _msg: None)
         # Optional OLED face hook (HW-006); no-op if no display is wired.
         self.set_emotion = set_emotion or (lambda _e: None)
+        # Optional research hook (DATA-002): fires with the TakenEvent so the
+        # recorder can dump the pre-event feature window as a labeled clip.
+        self.on_taken = on_taken
 
     def process_event(self, event: Event) -> None:
         ts = event.ts
         p = event.payload
 
         if event.type == BOTTLE_OBSERVATION:
-            self.compliance.observe(p["med_name"], p["present"], ts)
+            taken = self.compliance.observe(p["med_name"], p["present"], ts)
+            if taken is not None and self.on_taken is not None:
+                self.on_taken(taken)
 
         elif event.type == POSTURE:
             fall = self.posture_monitor.update(p["posture"], ts)
