@@ -1,5 +1,5 @@
 # MeSA 2.0 configuration — all tunable thresholds live here (ticket INFRA-003).
-# Values are placeholders for Phase 0; tune them as each subsystem lands.
+# Thresholds tuned during live bring-up (Jul-Aug 2026); see docs/eval/ for evidence.
 
 vision:
   camera_index: 0
@@ -34,7 +34,7 @@ voice:
   vosk_model_path: models/vosk-model-small-en-us
 
 alerts:
-  ntfy_topic: mesa-alerts-CHANGEME   # set to a private ntfy.sh topic
+  ntfy_topic: mesa-alerts-CHANGEME   # private topic (random suffix); subscribe in the ntfy app
   twilio_enabled: false
 
 # Hardware outputs — OLED face + pan/tilt head (HW-005/006).

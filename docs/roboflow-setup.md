@@ -5,7 +5,8 @@ dataset is reproducible and matches what the training notebook (VIS-004) expects
 
 ## 1. Create the project
 - Type: **Object Detection**.
-- Classes: the 6 bottle labels from `docs/capture-protocol.md` (keep ids in the same order).
+- Classes: the 8 medication labels + `tray` from `docs/capture-protocol.md`.
+- Actual project: workspace `vrishaank-mishra`, project `medication-safety-object-detecti`.
 
 ## 2. Upload
 - Upload everything from `datasets/raw/`.
@@ -33,3 +34,10 @@ Keep augmentations realistic for a tabletop camera — don't over-augment:
 - [ ] 70/20/10 train/val/test split configured.
 - [ ] Augmentations configured; YOLOv8-format version exported.
 - [ ] Roboflow project link recorded in the M1 milestone / README.
+
+## Lessons from the real runs (Aug 2026)
+- **Label Assist:** rejected in practice — the v1 model mislabeled everything in its own
+  blind spots (that's exactly where new rounds live). All 1,232 images were hand-labeled.
+- **Modify Classes is paywalled** on the free plan — class surgery (e.g. dropping `tray`)
+  is done in-notebook instead (see the drop-tray cell in notebooks/train_yolov8.ipynb).
+- Filenames are NOT ground truth (capture-swap artifacts) — annotations are.
