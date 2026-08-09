@@ -46,7 +46,7 @@ class VisionWorker(threading.Thread):
     """Camera → pose + detection → events. Start with ``.start()``, stop with ``.stop()``."""
 
     def __init__(self, bus: EventBus, cfg: dict, known_meds: set[str] | None = None,
-                 model_available: bool = True, capture=None):
+                 model_available: bool = True, capture=None, recorder=None):
         super().__init__(name="vision-worker", daemon=True)
         self.bus = bus
         self.cfg = cfg
@@ -56,6 +56,8 @@ class VisionWorker(threading.Thread):
         # caller may open the capture there and pass it in; on Linux/Pi it's fine to let
         # the worker open its own.
         self.capture = capture
+        # Optional ResearchRecorder (DATA-002): per-frame features -> ring buffer.
+        self.recorder = recorder
         self._stop = threading.Event()
 
         self.camera_index = get(cfg, "vision.camera_index", 0)
@@ -109,6 +111,10 @@ class VisionWorker(threading.Thread):
                 self.bus.publish(
                     Event(POSTURE, {"posture": smoother.update(reading.posture)}, ts=now)
                 )
+                if self.recorder is not None:
+                    lms = (reading.raw_result.pose_landmarks
+                           if reading.raw_result is not None else None)
+                    self.recorder.on_frame(lms, now)
 
                 if now - last_presence_ts >= self.presence_interval:
                     last_presence_ts = now
@@ -118,6 +124,10 @@ class VisionWorker(threading.Thread):
 
                 if detector is not None and frame_no % self.detect_every == 0:
                     detections = detector.detect(frame)
+                    if self.recorder is not None:
+                        if not self.recorder._name_to_id:
+                            self.recorder.set_class_names(detector.names)
+                        self.recorder.on_detections(detections)
                     if not self.known_meds:
                         # No meds configured in the DB: fall back to the model's classes.
                         self.known_meds = set(detector.names.values())
