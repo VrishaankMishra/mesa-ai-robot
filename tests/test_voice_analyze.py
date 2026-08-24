@@ -149,3 +149,38 @@ def test_resample_output_is_bytes_convertible_for_vosk():
     import numpy as np
     y = to_vosk_rate(np.zeros(4800, dtype="int16"), 48000, 16000)
     assert isinstance(y.tobytes(), bytes)
+
+
+# --- session provenance: audio + posture/position (RES-004) ------------------------
+
+def test_save_wav_roundtrips_pcm(tmp_path):
+    """A disputed trial must be re-checkable by ear, so the audio has to survive intact."""
+    import wave
+
+    import numpy as np
+    pcm = (np.sin(np.arange(1600) / 8.0) * 8000).astype("int16")
+    path = tmp_path / "trial_00.wav"
+    _capture.save_wav(path, pcm, 16000)
+
+    with wave.open(str(path)) as w:
+        assert w.getnchannels() == 1
+        assert w.getsampwidth() == 2
+        assert w.getframerate() == 16000
+        back = np.frombuffer(w.readframes(w.getnframes()), dtype="int16")
+    assert np.array_equal(back, pcm)
+
+
+def test_manifest_carries_posture_and_position():
+    """The 2026-08-24 pilot was read as a distance sweep because the condition string was
+    the only record of where the operator stood. Provenance now travels per row."""
+    rows = [{
+        "condition": "d1m_quiet_vrishaank", "wake_expected": "1", "wake_detected": "1",
+        "parsed_intent": "next_med", "expected_intent": "next_med",
+        "exact_wake_and_intent": "1", "posture": "standing", "position": "1m mark",
+    }]
+    assert va.aggregate(rows)["d1m_quiet_vrishaank"]["n_trials"] == 1
+    assert rows[0]["posture"] == "standing" and rows[0]["position"] == "1m mark"
+
+
+def test_guard_default_is_long_enough_to_drain_a_prompt():
+    assert _capture.GUARD_SECONDS >= 0.5
