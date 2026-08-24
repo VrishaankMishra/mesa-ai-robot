@@ -116,6 +116,12 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
     if capture.isOpened():
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, get(cfg, "vision.frame_width", 640))
         capture.set(cv2.CAP_PROP_FRAME_HEIGHT, get(cfg, "vision.frame_height", 480))
+        from mesa.vision.camera import configure_capture, disable_dynamic_framerate
+        locked = configure_capture(capture, cfg, cv2_module=cv2)
+        if locked:
+            disable_dynamic_framerate(get(cfg, "vision.camera.device", "/dev/video0"))
+            print("[live] camera locked: "
+                  + ", ".join(f"{k}={v}" for k, v in sorted(locked.items())))
         model_path = Path(get(cfg, "detection.model_path", "models/best.pt"))
         known_meds = {m["name"] for m in db.list_medications(active_only=False)}
         known_meds |= {s["med_name"] for s in db.get_schedule()}
