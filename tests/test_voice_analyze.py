@@ -100,3 +100,52 @@ def test_ambiguous_match_refuses_rather_than_guessing():
     with pytest.raises(ValueError) as e:
         resolve_input_device("SP300U", dupes)
     assert "matches 2 devices" in str(e.value)
+
+
+# --- capture-rate negotiation + resampling (RES-004) -------------------------------
+# Pinning the SP300U means talking to the raw hardware, which accepts 48 kHz only;
+# pulse used to hide that by resampling silently.
+
+pick_capture_rate = _capture.pick_capture_rate
+to_vosk_rate = _capture.to_vosk_rate
+
+
+def test_prefers_16k_when_the_device_accepts_it():
+    assert pick_capture_rate(lambda r: True, 48000.0, 16000) == 16000
+
+
+def test_falls_back_to_device_default_when_16k_is_refused():
+    """The SP300U's real behaviour: 16000/32000/44100 all rejected, 48000 only."""
+    assert pick_capture_rate(lambda r: r == 48000, 48000.0, 16000) == 48000
+
+
+def test_capture_rate_is_an_int():
+    assert isinstance(pick_capture_rate(lambda r: False, 48000.0), int)
+
+
+def test_resample_is_identity_at_matching_rates():
+    import numpy as np
+    x = np.array([0, 100, -100, 32767, -32768], dtype="int16")
+    assert np.array_equal(to_vosk_rate(x, 16000, 16000), x)
+
+
+def test_resample_48k_to_16k_thirds_the_length():
+    import numpy as np
+    x = np.zeros(48000, dtype="int16")
+    assert abs(len(to_vosk_rate(x, 48000, 16000)) - 16000) <= 1
+
+
+def test_resample_preserves_a_tone_and_stays_in_int16_range():
+    import numpy as np
+    t = np.arange(48000) / 48000.0
+    x = (np.sin(2 * np.pi * 440 * t) * 10000).astype("int16")   # 440 Hz, well under Nyquist
+    y = to_vosk_rate(x, 48000, 16000)
+    assert y.dtype == np.int16
+    assert 5000 < np.abs(y).max() <= 32767      # amplitude survives
+    assert abs(len(y) - 16000) <= 1
+
+
+def test_resample_output_is_bytes_convertible_for_vosk():
+    import numpy as np
+    y = to_vosk_rate(np.zeros(4800, dtype="int16"), 48000, 16000)
+    assert isinstance(y.tobytes(), bytes)
