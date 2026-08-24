@@ -56,6 +56,13 @@ SCRIPT = [
 RECORD_SECONDS = 5.0
 SAMPLE_RATE = 16000
 
+# espeak-ng returns when it has handed audio to the USB speakerphone, not when the
+# speakerphone has finished playing it. Without a guard the tail of "Repeat: ..." is
+# still sounding when the capture window opens, and the SP300U hears itself: on
+# 2026-08-24 the near-homophone control transcribed as "repeat" in two of three runs,
+# scoring as a pass while nothing was actually tested.
+GUARD_SECONDS = 0.8
+
 # The grid's independent variable is distance from the SP300U speakerphone, so the mic is
 # part of the method, not a detail. sounddevice's default input resolves through ALSA
 # "default" -> pulse -> whatever pulse picks, and the Pi has a second microphone in the
@@ -137,6 +144,23 @@ def resolve_input_device(spec: str, devices: list[dict]) -> tuple[int, str]:
                      + ", ".join(f"{i}:{n}" for i, n in matches))
 
 
+def save_wav(path, pcm_int16, rate: int) -> None:
+    """Write mono int16 PCM to ``path``.
+
+    The manifest records only what Vosk heard, which on 2026-08-24 made operator habit,
+    ASR error and prompt bleed indistinguishable after the fact. Keeping the audio makes
+    any disputed trial re-checkable by ear. It is the operator's own voice and
+    ``eval_voice/`` is gitignored, so the release stays features-only.
+    """
+    import wave
+
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(int(rate))
+        w.writeframes(pcm_int16.tobytes())
+
+
 def say(text: str) -> None:
     print(f"[say] {text}", flush=True)
     subprocess.run(["espeak-ng", "-s", "155", text], check=False)
@@ -158,6 +182,14 @@ def main() -> int:
     p.add_argument("--record-seconds", type=float, default=RECORD_SECONDS)
     p.add_argument("--device", default=DEFAULT_INPUT_DEVICE,
                    help="input device index or name substring (default: the SP300U)")
+    p.add_argument("--guard-seconds", type=float, default=GUARD_SECONDS,
+                   help="silence after the cue before recording, so playback drains")
+    p.add_argument("--posture", required=True, choices=["standing", "seated"],
+                   help="operator posture — recorded per trial, not inferred from the label")
+    p.add_argument("--position", required=True,
+                   help="measured operator position, e.g. '1m mark' or '36in'")
+    p.add_argument("--keep-audio", action="store_true", default=True,
+                   help="save each trial's audio next to the manifest (default: on)")
     args = p.parse_args()
 
     import numpy as np
@@ -202,10 +234,13 @@ def main() -> int:
         say(f'Repeat: "{utterance}"')
         time.sleep(0.6)
         subprocess.run(["espeak-ng", "-s", "300", "-p", "80", "go"], check=False)
+        time.sleep(args.guard_seconds)   # let the speakerphone stop talking before we listen
         audio = sd.rec(int(args.record_seconds * capture_rate), samplerate=capture_rate,
                        channels=1, dtype="int16", device=dev_index)
         sd.wait()
         pcm16k = to_vosk_rate(audio, capture_rate, SAMPLE_RATE)
+        if args.keep_audio:
+            save_wav(out_dir / f"trial_{i:02d}.wav", pcm16k, SAMPLE_RATE)
         transcript = transcribe(pcm16k.tobytes(), model)
 
         wake_detected = DEFAULT_WAKE_WORD in transcript.lower()
@@ -218,7 +253,7 @@ def main() -> int:
               f"intent={parsed or '-'} {'OK' if ok else 'MISS'}", flush=True)
         w.writerow([args.condition, session, i, utterance, expected_intent or "",
                     int(wake_expected), transcript, int(wake_detected), parsed, int(ok),
-                    dev_name, capture_rate])
+                    dev_name, capture_rate, args.posture, args.position])
         mf.flush()
 
     mf.close()
