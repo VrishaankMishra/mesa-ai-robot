@@ -44,40 +44,52 @@ Per-cell: wake rate, false-wake rate, intent accuracy given wake, exact rate →
 `docs/eval/voice_grid_results.csv`. ~2 hours total across a few days completes the grid.
 
 
-## Pilot round — 2026-08-24 (NOT grid data)
+## Pilot round — 2026-08-24 (NOT grid data — one condition, three repeats)
 
-Three quiet cells were run end-to-end as a **pilot**, to shake out the protocol rather than
-to measure the system. Their condition labels carry a `_pilot` suffix *inside the manifests*
-as well as in the directory names, so `eval_voice_analyze.py` — which groups by the
-`condition` column, not the path — can never merge them into the real grid.
+Three quiet sessions were run end-to-end as a **pilot**, to shake out the protocol rather than
+to measure the system. Their condition labels carry a `_pilot` suffix *inside the manifests* as
+well as in the directory names, so `eval_voice_analyze.py` — which groups by the `condition`
+column, not the path — can never merge them into the real grid.
 
-| cell | wake | false-wake | intent given wake | exact |
-|------|------|-----------|-------------------|-------|
-| `d1m_quiet_vrishaank_pilot` | 73% | 67% | 91% | 61% |
-| `d2m_quiet_vrishaank_pilot` | 73% | 0%  | 100% | 78% |
-| `d3m_quiet_vrishaank_pilot` | 80% | 0%  | 92% | 78% |
+**Correction (recorded deliberately).** These were first labelled `d1m` / `d2m` / `d3m` and read
+as a distance sweep. They were not: all three ran from **~36 inches (0.91 m), seated in a chair**.
+They are three repeats of one condition, relabelled `d36in_seated_quiet_vrishaank_pilot_run1/2/3`.
+The earlier reading — "distance is not the limiting factor between 1 m and 3 m" — was unsupported
+and has been withdrawn. Flat numbers across three identical conditions are what identical
+conditions look like.
 
-**Provisional signals** (pilot-grade, n=18 per cell, one speaker, one room):
-- Distance is not the limiting factor between 1 m and 3 m in a quiet room — wake rate is flat
-  (73/73/80) and 3 m scored best. The wake word's acoustic fragility dominates: "MeSA" was
-  transcribed as `may so`, `reza so` and `minister` across cells.
-- Intent parsing given a detected wake is strong (91–100%). The failure is upstream of intent.
+| run (same condition) | wake | false-wake | intent given wake | exact |
+|----------------------|------|-----------|-------------------|-------|
+| run 1 | 73% | 67% | 91% | 61% |
+| run 2 | 73% | 0%  | 100% | 78% |
+| run 3 | 80% | 0%  | 92% | 78% |
 
-**Two protocol defects to fix before any grid cell is run:**
-1. **The robot records its own prompt.** `espeak-ng` returns when it has handed audio to the
-   USB speakerphone, not when playback finishes, so the tail of *"Repeat: …"* is still audible
-   when the capture window opens. Trial 17 transcribed as `repeat` in two cells and
-   `may says wait what repeat` in the third. Fix: a guard gap after the beep so playback
-   drains before recording starts.
-2. **The near-homophone control passes for the wrong reason.** Trial 17 exists to prove
-   "may sun" does not trip the wake word. In all three cells the microphone mostly heard the
-   prompt, so `wake=False` was recorded and scored as a pass while nothing was actually
-   tested. A control that passes on silence is worse than no control.
-3. **Nothing records what the operator actually said** — only Vosk's transcript. That is why
-   the 1 m false-wake rate of 67% cannot be attributed: operator habit, ASR hallucination and
-   prompt bleed are indistinguishable after the fact. The 2 m and 3 m cells both scoring 0%
-   points to first-cell warm-up, but the harness cannot prove it. Fix: save each trial's audio
-   into the session directory (own voice, `eval_voice/` is gitignored, privacy stance
-   unchanged) so any disputed trial is re-checkable by ear.
+**What this round does support** (pilot-grade, n=18 per run, one speaker, one position):
+- **Test-retest spread on an unchanged condition: 17 points of exact rate (61→78%) and 7 points
+  of wake rate.** That is the noise floor. Any cell-to-cell difference in the real grid smaller
+  than this cannot be read as an effect, which is a number worth having before collecting 12 cells.
+- Intent parsing given a detected wake is strong (91–100%). The failure is upstream of intent:
+  "MeSA" was transcribed as `may so`, `reza so` and `minister`.
+- The 67% false-wake in run 1 did not reproduce in runs 2 or 3 (both 0%), consistent with
+  first-run warm-up on the no-wake controls — the reflex to say the wake word anyway.
+
+**A variable the grid design does not currently control:** these runs were **seated**, while the
+grid assumes standing at a taped mark. Mouth height and orientation relative to the SP300U differ
+between the two. Posture needs to be fixed in the protocol and recorded per session, or it becomes
+an uncontrolled variable riding along with distance.
+
+**Three protocol defects to fix before any grid cell is run:**
+1. **The robot records its own prompt.** `espeak-ng` returns when it has handed audio to the USB
+   speakerphone, not when playback finishes, so the tail of *"Repeat: …"* is still audible when the
+   capture window opens. Trial 17 transcribed as `repeat` in two runs and `may says wait what
+   repeat` in the third. Fix: a guard gap after the beep so playback drains before recording starts.
+2. **The near-homophone control passes for the wrong reason.** Trial 17 exists to prove "may sun"
+   does not trip the wake word. In all three runs the microphone mostly heard the prompt, so
+   `wake=False` was recorded and scored as a pass while nothing was actually tested. A control that
+   passes on silence is worse than no control.
+3. **Nothing records what the operator actually said** — only Vosk's transcript. That is why run 1's
+   false-wake rate cannot be attributed: operator habit, ASR hallucination and prompt bleed are
+   indistinguishable after the fact. Fix: save each trial's audio into the session directory (own
+   voice, `eval_voice/` is gitignored, privacy stance unchanged).
 
 **Also still open:** the `tv` volume step is unchosen, so no `tv` cell can start.
