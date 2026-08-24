@@ -56,6 +56,40 @@ SCRIPT = [
 RECORD_SECONDS = 5.0
 SAMPLE_RATE = 16000
 
+# The grid's independent variable is distance from the SP300U speakerphone, so the mic is
+# part of the method, not a detail. sounddevice's default input resolves through ALSA
+# "default" -> pulse -> whatever pulse picks, and the Pi has a second microphone in the
+# C920. Card numbers also move across reboots (the SP300U was card 3 in July and card 2 on
+# 2026-08-24). An unpinned default would silently make "3m from the speakerphone" mean
+# "3m from the webcam", and the manifest would not say so.
+DEFAULT_INPUT_DEVICE = "SP300U"
+
+
+def resolve_input_device(spec: str, devices: list[dict]) -> tuple[int, str]:
+    """Resolve ``spec`` (an index, or a case-insensitive name substring) to (index, name).
+
+    Only devices with input channels are eligible. Raises ValueError listing what IS
+    available rather than falling back to a default — recording the wrong microphone
+    invalidates a session silently, which is worse than not recording at all.
+    """
+    inputs = [(i, d) for i, d in enumerate(devices) if d.get("max_input_channels", 0) > 0]
+
+    if spec.isdigit():
+        idx = int(spec)
+        for i, d in inputs:
+            if i == idx:
+                return i, d["name"]
+        raise ValueError(f"device index {idx} is not an input device")
+
+    matches = [(i, d["name"]) for i, d in inputs if spec.lower() in d["name"].lower()]
+    if len(matches) == 1:
+        return matches[0]
+    available = ", ".join(f"{i}:{d['name']}" for i, d in inputs) or "none"
+    if not matches:
+        raise ValueError(f"no input device matching {spec!r}. Available: {available}")
+    raise ValueError(f"{spec!r} matches {len(matches)} devices: "
+                     + ", ".join(f"{i}:{n}" for i, n in matches))
+
 
 def say(text: str) -> None:
     print(f"[say] {text}", flush=True)
@@ -76,6 +110,8 @@ def main() -> int:
                    help="cell label, e.g. d1m_quiet_vrishaank / d3m_tv_mom")
     p.add_argument("--model", default="models/vosk-model-small-en-us")
     p.add_argument("--record-seconds", type=float, default=RECORD_SECONDS)
+    p.add_argument("--device", default=DEFAULT_INPUT_DEVICE,
+                   help="input device index or name substring (default: the SP300U)")
     args = p.parse_args()
 
     import numpy as np
@@ -83,6 +119,10 @@ def main() -> int:
     from vosk import Model, SetLogLevel
 
     SetLogLevel(-1)
+
+    dev_index, dev_name = resolve_input_device(args.device, list(sd.query_devices()))
+    print(f"[voice] recording from device {dev_index}: {dev_name}", flush=True)
+
     model = Model(args.model)
 
     session = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -104,7 +144,7 @@ def main() -> int:
         time.sleep(0.6)
         subprocess.run(["espeak-ng", "-s", "300", "-p", "80", "go"], check=False)
         audio = sd.rec(int(args.record_seconds * SAMPLE_RATE), samplerate=SAMPLE_RATE,
-                       channels=1, dtype="int16")
+                       channels=1, dtype="int16", device=dev_index)
         sd.wait()
         transcript = transcribe(np.asarray(audio).tobytes(), model)
 
@@ -117,7 +157,8 @@ def main() -> int:
         print(f"  [{i+1:02d}/{len(SCRIPT)}] heard='{transcript}' wake={wake_detected} "
               f"intent={parsed or '-'} {'OK' if ok else 'MISS'}", flush=True)
         w.writerow([args.condition, session, i, utterance, expected_intent or "",
-                    int(wake_expected), transcript, int(wake_detected), parsed, int(ok)])
+                    int(wake_expected), transcript, int(wake_detected), parsed, int(ok),
+                    dev_name])
         mf.flush()
 
     mf.close()

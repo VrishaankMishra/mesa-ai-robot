@@ -9,9 +9,18 @@ per cell.
 
 distance {1m, 2m, 3m} × noise {quiet, tv} × speaker {vrishaank, mom, (+1 optional)}
 
-- Mark 1m / 2m / 3m from the SP300U speakerphone with tape (one-time).
+- Mark 1m / 2m / 3m from the SP300U speakerphone with tape (one-time). **Done 2026-08-24.**
+- **The microphone is pinned by name, not by index.** The capture script resolves the
+  SP300U by name substring and refuses to run if it cannot find exactly one match; the
+  device it used is printed at session start and written into every manifest row. This is
+  method, not plumbing: sounddevice's default input resolves through ALSA `default` to
+  whatever pulse picks, the Pi has a second mic in the C920, and card numbers move across
+  reboots (the SP300U was card 3 in July and card 2 on 2026-08-24). An unpinned default
+  would make "3m from the speakerphone" silently mean "3m from the webcam". Override with
+  `--device` only when deliberately changing microphones — and say so in the paper.
 - `tv` cells: the same audio source at the same volume every time (pick a show, note
   the volume step in this doc after the first session; it becomes part of the method).
+  **Still to choose — the `tv` cells cannot start until it is fixed and written here.**
 - One command per cell, run from the Pi:
 
 ```bash
