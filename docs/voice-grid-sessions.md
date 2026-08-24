@@ -24,8 +24,15 @@ distance {1m, 2m, 3m} × noise {quiet, tv} × speaker {vrishaank, mom, (+1 optio
 - One command per cell, run from the Pi:
 
 ```bash
-.venv/bin/python scripts/eval_voice_capture.py --condition d1m_quiet_vrishaank
+.venv/bin/python scripts/eval_voice_capture.py --condition d1m_quiet_vrishaank \
+    --posture standing --position "1m mark"
 ```
+
+`--posture` and `--position` are **required**: on 2026-08-24 three sessions were labelled
+`d1m`/`d2m`/`d3m` and read as a distance sweep when all three had in fact been run from one
+seated position. The condition string is a filename, not evidence — where the operator was
+is now recorded per trial, from the room. Each trial's audio is also saved beside the
+manifest (`trial_NN.wav`), so a disputed trial can be settled by ear instead of by argument.
 
 Naming: `d{1m|2m|3m}_{quiet|tv}_{speaker}`. Speak at your normal voice; do NOT lean in
 or shout — the study measures the system, not the operator's effort.
