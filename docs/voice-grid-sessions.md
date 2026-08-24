@@ -42,3 +42,42 @@ must parse OKAY, not HELP).
 ```
 Per-cell: wake rate, false-wake rate, intent accuracy given wake, exact rate →
 `docs/eval/voice_grid_results.csv`. ~2 hours total across a few days completes the grid.
+
+
+## Pilot round — 2026-08-24 (NOT grid data)
+
+Three quiet cells were run end-to-end as a **pilot**, to shake out the protocol rather than
+to measure the system. Their condition labels carry a `_pilot` suffix *inside the manifests*
+as well as in the directory names, so `eval_voice_analyze.py` — which groups by the
+`condition` column, not the path — can never merge them into the real grid.
+
+| cell | wake | false-wake | intent given wake | exact |
+|------|------|-----------|-------------------|-------|
+| `d1m_quiet_vrishaank_pilot` | 73% | 67% | 91% | 61% |
+| `d2m_quiet_vrishaank_pilot` | 73% | 0%  | 100% | 78% |
+| `d3m_quiet_vrishaank_pilot` | 80% | 0%  | 92% | 78% |
+
+**Provisional signals** (pilot-grade, n=18 per cell, one speaker, one room):
+- Distance is not the limiting factor between 1 m and 3 m in a quiet room — wake rate is flat
+  (73/73/80) and 3 m scored best. The wake word's acoustic fragility dominates: "MeSA" was
+  transcribed as `may so`, `reza so` and `minister` across cells.
+- Intent parsing given a detected wake is strong (91–100%). The failure is upstream of intent.
+
+**Two protocol defects to fix before any grid cell is run:**
+1. **The robot records its own prompt.** `espeak-ng` returns when it has handed audio to the
+   USB speakerphone, not when playback finishes, so the tail of *"Repeat: …"* is still audible
+   when the capture window opens. Trial 17 transcribed as `repeat` in two cells and
+   `may says wait what repeat` in the third. Fix: a guard gap after the beep so playback
+   drains before recording starts.
+2. **The near-homophone control passes for the wrong reason.** Trial 17 exists to prove
+   "may sun" does not trip the wake word. In all three cells the microphone mostly heard the
+   prompt, so `wake=False` was recorded and scored as a pass while nothing was actually
+   tested. A control that passes on silence is worse than no control.
+3. **Nothing records what the operator actually said** — only Vosk's transcript. That is why
+   the 1 m false-wake rate of 67% cannot be attributed: operator habit, ASR hallucination and
+   prompt bleed are indistinguishable after the fact. The 2 m and 3 m cells both scoring 0%
+   points to first-cell warm-up, but the harness cannot prove it. Fix: save each trial's audio
+   into the session directory (own voice, `eval_voice/` is gitignored, privacy stance
+   unchanged) so any disputed trial is re-checkable by ear.
+
+**Also still open:** the `tv` volume step is unchosen, so no `tv` cell can start.
