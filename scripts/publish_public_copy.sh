@@ -16,6 +16,7 @@ EXCLUDE_PATHS=(
   docs/proposal
   docs/engineering-notebook.md
   docs/eval/val_batch0_pred.jpg
+  scripts/make_urtc_poster.py
 )
 # Secret strings rewritten across all history (literal==>replacement per line).
 REPLACEMENTS="$(mktemp)"
