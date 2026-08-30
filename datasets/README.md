@@ -33,10 +33,12 @@ drop-tray cell in `notebooks/train_yolov8.ipynb`.)
 
 ## Evaluation data (exists — domain-shift study, Aug 8–9, 2026)
 
-`eval_data/<condition>/<session>/` (gitignored): 8 conditions × 216 frames = 1,728
-frames + manifests, produced by `scripts/eval_capture.py` (scripted placement = ground
-truth by construction; zero manual labels). Lives on the Pi and iMac. Scored results
-are committed: `docs/eval/domain_shift_results.csv` (4,752 rows across 3 model arms).
+`eval_data/<condition>/<session>/` (gitignored): 8 conditions × 216 captured frames =
+1,728 captured + manifests, produced by `scripts/eval_capture.py` (scripted placement =
+ground truth by construction; zero manual labels). Lives on the Pi and iMac. The first
+frame of each cell is dropped uniformly (it catches the previous container mid-swap),
+so **1,584 frames per arm are scored** — that is the number to quote, not 1,728. Scored
+results are committed: `docs/eval/domain_shift_results.csv` (4,752 rows = 1,584 × 3 arms).
 
 ## YOLO export structure (what training consumes)
 

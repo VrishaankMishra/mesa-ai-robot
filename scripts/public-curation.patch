@@ -29,13 +29,13 @@ diff --git a/README.md b/README.md
 index ca61cfc..91ac0c0 100644
 --- a/README.md
 +++ b/README.md
-@@ -28,7 +28,7 @@ protocol where scripted placement makes ground truth free** — 1,728 labeled fi
+@@ -28,7 +28,6 @@ protocol where scripted placement makes ground truth free** — 1,728 labeled fi
  evaluations across an 8-condition lighting grid × 3 model arms, zero manual annotation,
  ~90 minutes of operator time.
  
 -**Findings** (full paper: [docs/paper/domain-shift-paper.md](docs/paper/domain-shift-paper.md) ·
-+**Findings** (paper preprint forthcoming on arXiv ·
- data: [docs/eval/domain_shift_results.csv](docs/eval/domain_shift_results.csv) ·
+-data: [docs/eval/domain_shift_results.csv](docs/eval/domain_shift_results.csv) ·
++**Findings** (data: [docs/eval/domain_shift_results.csv](docs/eval/domain_shift_results.csv) ·
  figures: [docs/eval/figures/](docs/eval/figures)):
  
 @@ -101,19 +101,18 @@ mesa/
@@ -56,7 +56,7 @@ index ca61cfc..91ac0c0 100644
 -2. [The paper](docs/paper/pdf/domain-shift-paper.pdf) — the study, 7 pages with figures.
 -3. [The demo runbook](docs/demo-runbook.md) — how the live show runs, every staging
 +1. [The domain-shift study results](docs/eval/eval-report-v1.md) — evaluation report,
-+   per-condition data, and figures. Paper preprint forthcoming on arXiv.
++   per-condition data, and figures.
 +2. [The demo runbook](docs/demo-runbook.md) — how the live show runs, every staging
     rule backed by a measurement.
 +3. [The ticket board](docs/IMPLEMENTATION.md) — the 10-week plan and what's done.

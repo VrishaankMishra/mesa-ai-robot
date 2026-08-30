@@ -31,7 +31,7 @@ station, LED lamp, speakerphone): [setup tour video](https://github.com/Vrishaan
 
 The detector scored 0.953 mAP@50 — then failed at 8 PM in its own room. Instead of
 patching around that, the robot became the instrument: a **voice-guided evaluation
-protocol where scripted placement makes ground truth free** — 1,728 labeled field
+protocol where scripted placement makes ground truth free** — 1,584 scored field
 evaluations across an 8-condition lighting grid × 3 model arms, zero manual annotation,
 ~90 minutes of operator time.
 
@@ -42,7 +42,7 @@ figures: [docs/eval/figures/](docs/eval/figures)):
 - Detection collapses at **both** lighting extremes — direct morning sun is *worse than
   near-darkness* — and which containers fail is set by their reflectance (the victims
   **invert** between extremes).
-- A **$10 LED lamp** restores near-dark detection from 38–71% → 92–100%.
+- A **$10 LED lamp** restores near-dark detection from 41–77% → 95–100%.
 - The wrong-medication safeguard **degrades as lighting improves** (confident vision =
   confident misidentification of look-alikes) — a safety asymmetry.
 - Naive synthetic lighting augmentation **failed off-domain** while remaining
