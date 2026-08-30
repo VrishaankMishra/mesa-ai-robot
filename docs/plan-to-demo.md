@@ -4,8 +4,8 @@ One hour a day, Aug 30 → Sept 13. School starts **Sept 2**, so days after that
 evening hours; the plan front-loads anything that can be done before then.
 
 **Fixed dates:** URTC edit window closes **Sept 4** · student demos **Sept 13** and
-**Sept 20** · Regeneron STS ~mid-Nov `[verify exact date at regeneron.com/sts]` ·
-college ED/EA **Nov 1**.
+**Sept 20** · college ED/EA **Nov 1** · **Regeneron STS Nov 5, 8:00pm ET** — application
+*and* all three recommendations, no exceptions (verified 2026-08-30).
 
 **Status as of Aug 30:** URTC poster **submitted** (CMT still allows Edit/Delete until
 Sept 4; the uploaded PDF was verified pixel-identical to the repo render). Branches:
@@ -63,28 +63,39 @@ presence. Decide before re-enabling the recorder.
 | **Sept 12** (Sat) | Dress rehearsal 2, full dry run | two clean runs back to back |
 | **Sept 13** (Sun) | **Demo** | — |
 
-## The STS lane — runs parallel, not after
+## The STS lane — runs parallel, and the writing is bigger than we thought
 
-**STS needs no new research.** The domain-shift paper is 8 pages and ~90% of a ≤20-page
-report; it needs student-voice framing and expanded methods, not more data. The voice grid
-and the intent predictor strengthen ISEF and interviews — they are **not** on the STS path.
+**Verified Nov 5, 2026, 8:00pm ET** — application *and* all three recommendations, same
+deadline, no exceptions (support desk closes Nov 4). That is ~10 days earlier than the
+"~mid-Nov" we assumed, and **four days after college ED/EA**.
 
-Fit these into the same hour on days the demo lane is light, and take the whole hour after
-Sept 13:
+**The plan changed.** STS rules state plainly: *"The Student Researcher is required to write
+the paper without the use of generative AI."* `domain-shift-paper.md` was drafted with
+Claude, so **it cannot be reformatted into the STS Research Report** — the earlier
+"it's ~90% there" assumption is void. Vrishaank writes the report himself, in his own
+words, from the same data.
 
-- [ ] **Recommender search** — one educator + one who knows the research. Widen beyond
-      Suchow now; do not wait on a single silent professor.
+What that does *not* touch: the study, the 4,752-row CSV, every figure, the harness, the
+notebook, the findings. All of it stands and is his. The remaining work is the writing.
+
+References must also be rebuilt by hand — AI-generated reference lists are barred, and a
+fake reference is **disqualification**, not a correction.
+
+- [ ] **Recommenders — start week one.** Three: educator, project, and the counselor's
+      school report. All due Nov 5. Suchow silent since Aug 12; widen the search.
 - [ ] **Counselor**, week one — transcript + school report.
-- [ ] **Verify the exact STS deadline** and open the online application shell.
-- [ ] **Fill or cut the two `[anchor ref]` citation slots** in `domain-shift-paper.md`.
-      They are stripped from the PDF, but the gap is real and blocks any submission.
-- [ ] **Reformat paper → 20-page report**, student voice, expanded methods (Sept–Oct).
-- [ ] **Essays** — mine the engineering notebook; they overlap college essays heavily.
-- [ ] **AI disclosure** stated plainly in the who-did-what section. The commit history and
-      notebook show every decision, test and dataset was Vrishaank's — provenance is a
-      strength here.
+- [ ] **Open the application shell** (opened June 1).
+- [ ] **Rebuild the reference list from primary sources**, by hand. Fill or cut the two
+      empty `[anchor ref]` slots.
+- [ ] **Write the 20-page report** (Sept–Oct, after Sept 13). 1.5 spacing, 1" margins,
+      single column, ≥11pt. Title page/abstract/bibliography excluded; appendices count.
+      Every figure cited, including his own. No links outside references. PDF ≤ 4MB,
+      named `MISHRA.VRISHAANK.<zip>`.
+- [ ] **Short essays** — mine the notebook; they overlap college essays.
+- [ ] **Disclose AI support** in the project. Permitted and expected; the commit history
+      and notebook show the decisions were his.
 
-Front-load Sept–Oct: college ED/EA lands Nov 1, in the same window.
+Front-load Sept–Oct hard: Nov 1 and Nov 5 are four days apart.
 
 ## Voice work — two tracks, do not confuse them
 
