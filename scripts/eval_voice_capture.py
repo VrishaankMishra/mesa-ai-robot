@@ -59,7 +59,7 @@ SAMPLE_RATE = 16000
 # espeak-ng returns when it has handed audio to the USB speakerphone, not when the
 # speakerphone has finished playing it. Without a guard the tail of "Repeat: ..." is
 # still sounding when the capture window opens, and the SP300U hears itself: on
-# 2026-08-24 the near-homophone control transcribed as "repeat" in two of three runs,
+# 2026-08-27 the near-homophone control transcribed as "repeat" in two of three runs,
 # scoring as a pass while nothing was actually tested.
 GUARD_SECONDS = 0.8
 
@@ -67,7 +67,7 @@ GUARD_SECONDS = 0.8
 # part of the method, not a detail. sounddevice's default input resolves through ALSA
 # "default" -> pulse -> whatever pulse picks, and the Pi has a second microphone in the
 # C920. Card numbers also move across reboots (the SP300U was card 3 in July and card 2 on
-# 2026-08-24). An unpinned default would silently make "3m from the speakerphone" mean
+# 2026-08-27). An unpinned default would silently make "3m from the speakerphone" mean
 # "3m from the webcam", and the manifest would not say so.
 DEFAULT_INPUT_DEVICE = "SP300U"
 
@@ -147,7 +147,7 @@ def resolve_input_device(spec: str, devices: list[dict]) -> tuple[int, str]:
 def save_wav(path, pcm_int16, rate: int) -> None:
     """Write mono int16 PCM to ``path``.
 
-    The manifest records only what Vosk heard, which on 2026-08-24 made operator habit,
+    The manifest records only what Vosk heard, which on 2026-08-27 made operator habit,
     ASR error and prompt bleed indistinguishable after the fact. Keeping the audio makes
     any disputed trial re-checkable by ear. It is the operator's own voice and
     ``eval_voice/`` is gitignored, so the release stays features-only.
