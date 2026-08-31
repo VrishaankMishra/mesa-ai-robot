@@ -156,6 +156,29 @@ New DAO methods (mirroring the existing `log_event` style): `create_session(...)
 
 ---
 
+## 5b. Known clock offset — clips and events from 2026-08-27
+
+**Any clip or `events.db` row whose timestamp falls on 2026-08-24 was actually recorded on
+2026-08-27.** The Pi rebooted with a stale RTC and NTP synced only later in the session, so
+every artefact that session produced carries a date roughly three days early. Both clocks
+agree now (`timedatectl`: synchronized, NTP active).
+
+Affected: `events.db` rows 5–10, and the epoch-encoded filenames of the first two research
+clips.
+
+**The recorded values are left as they were.** They are observations, and the true wall-clock
+times cannot be recovered — only the date is known to be wrong. Silently rewriting recorded
+timestamps to inferred values is a worse failure than carrying a documented offset, especially
+for a dataset whose entire claim is that its labels come from the protocol rather than from
+after-the-fact editing.
+
+What is unaffected, and is what the data is actually used for: the **relative** ordering and
+the intervals between frames within a clip. The offset is constant across the session, so
+every within-session timing feature is intact.
+
+Anything analysing these clips by absolute date must apply the offset. Anything analysing
+them by sequence or duration can ignore it.
+
 ## 6. Labeling — fully automatic (the whole point)
 
 - **Positive clip** ← every `taken` event (`compliance.observe`) is an anchor. RES-001's ring

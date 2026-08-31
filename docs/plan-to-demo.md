@@ -22,7 +22,7 @@ dropping something else.
 
 1. **Pick the `tv` volume step** (a show + a volume number) and write it into
    `docs/voice-grid-sessions.md`. Until it exists, **6 of 12 voice-grid cells cannot
-   start.** This is the cheapest unblock in the project and has been open since Aug 24.
+   start.** This is the cheapest unblock in the project and has been open since Aug 27.
 2. **Set `research.enabled: false` in `config.yaml`** until the pose question below is
    settled. It is currently `true`, so every medication pickup writes another clip whose
    pose stream is unusable — the dataset is filling with noise.
@@ -49,7 +49,8 @@ presence. Decide before re-enabling the recorder.
 |---|---|---|
 | **Aug 30** (Sun) | Reconcile branches; close the poster-script leak | `poster/urtc-compliance` merged to `main` |
 | **Aug 31** (Mon) | Merge `vision/demo-hardening`; resolve EXCLUDE_PATHS overlap. Do the three quick unblocks above | one clean `main`, tests green |
-| **Sept 1** (Tue) | Fix the Aug-24/Aug-27 date error; decide DB rows + clip filenames | provenance recorded or rewritten |
+| ~~Sept 1~~ **done Aug 30** | ~~Date error~~ — corrected in code, tests, docs and the notebook; clock offset recorded in `research-dataset-design.md` §5b rather than rewriting recorded data | ✅ |
+| **Sept 1** (Tue) | Republish the public repo from the merged `main` — pushes the corrected README, drops the arXiv line, and restamps the curation commit off the stale clock | public README shows 1,584 |
 | **Sept 2** (Wed) | *School starts.* Counselor (STS transcript/school report) + SRC human-participants forms | forms submitted |
 | **Sept 3** (Thu) | **FALL first.** VIS-010 torso gate live on the Pi | staged lying poses classify; no spurious L1 |
 | **Sept 4** (Fri) | URTC edit window closes — final check the CMT abstract says `1,584` / `41–77%`. Then camera values at the station (VIS-011) | `camera.enabled: true`, measured |
@@ -109,7 +110,7 @@ mis-recognition fallback. Scheduled Sept 8. Not blocked by anything.
   per-trial `trial_NN.wav`, and required `--posture`/`--position`.
 - Tape marks at 1/2/3 m are in place.
 - **Blocked on:** the `tv` volume step (6 cells) and SRC approval (Mom's cells).
-- **All cells must be re-run standing** at real 1/2/3 m. The Aug-24 pilot was three repeats
+- **All cells must be re-run standing** at real 1/2/3 m. The Aug-27 pilot was three repeats
   of one seated position at ~36 in; that audio was deleted.
 - Already banked and still valid: the **17-point test-retest noise floor** on exact rate
   (7 on wake). Any cell-to-cell difference smaller than that is not an effect.
