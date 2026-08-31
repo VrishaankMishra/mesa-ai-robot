@@ -9,9 +9,9 @@ twice before anyone watches.
 1. **Camera stays at its taped position.** Geometry is load-bearing
    (docs/eval/eval-report-v1.md). Never re-aim for a demo.
 2. **LED lamp ON at its outlined spot** for any demo after ~6 PM or in a dim room.
-   (Evening-dim detection: 38–71% without, 92–100% with — lamp_recovery.png.)
+   (Evening-dim detection: 41–77% without, 95–100% with — lamp_recovery.png.)
 3. **Never demo 7:30–9:00 AM with the window uncovered** — direct-beam sun is the
-   worst measured condition (0–42% on six meds). If morning: curtain closed, lights on.
+   worst measured condition (0–41% on six meds). If morning: curtain closed, lights on.
 4. **Bottles spread ≥20 cm apart at the marks** — clusters read as "tray".
 5. **bayer_aspirin lives at the near (24") mark** — it under-confidences at 32".
 6. **Wrong-med prop = an untrained BOTTLE (TUMS), not the Benadryl box** — boxes get
