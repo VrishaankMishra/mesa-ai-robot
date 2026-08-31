@@ -67,3 +67,39 @@ def test_load_into_db():
     assert len(db.get_schedule()) == 3
     assert {m["name"] for m in db.list_medications()} == {"tylenol", "vitamin_d"}
     db.close()
+
+
+# The eight classes models/best.pt was trained on (v2, 2026-08-07). `tray` is a scene
+# class, not a medication, so it is deliberately absent.
+TRAINED_MED_CLASSES = {
+    "advil", "ashwagandha", "bayer_aspirin", "cvs_allergy",
+    "melatonin", "mylanta", "omeprazole", "vitamin_d3",
+}
+
+
+def test_station_csv_names_match_the_trained_classes():
+    """Regression guard for the mismatch found 2026-08-24.
+
+    examples/prescriptions.csv is a generic sample (Tylenol, Ibuprofen, ...) whose names
+    match no trained class, so loading it leaves the schedule and the detector speaking
+    different languages: a `taken` event never links to a scheduled dose and "did I take
+    my advil" has nothing to match. The station CSV is the one MeSA actually runs on.
+    """
+    from pathlib import Path
+
+    csv_path = Path(__file__).resolve().parent.parent / "examples" / "mesa-station.csv"
+    entries = parse_prescription_csv(csv_path.read_text(encoding="utf-8"))
+    names = {e.med_name for e in entries}
+
+    assert names <= TRAINED_MED_CLASSES, f"not detectable: {sorted(names - TRAINED_MED_CLASSES)}"
+    assert names == TRAINED_MED_CLASSES, f"never scheduled: {sorted(TRAINED_MED_CLASSES - names)}"
+
+
+def test_station_csv_covers_the_day():
+    from pathlib import Path
+
+    csv_path = Path(__file__).resolve().parent.parent / "examples" / "mesa-station.csv"
+    entries = parse_prescription_csv(csv_path.read_text(encoding="utf-8"))
+    times = sorted(e.time_of_day for e in entries)
+    assert times[0] < "12:00" and times[-1] > "18:00", "demo needs a next-dose most of the day"
+    assert all(e.dose for e in entries), "every dose should be speakable"

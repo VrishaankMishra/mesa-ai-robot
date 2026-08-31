@@ -56,6 +56,110 @@ SCRIPT = [
 RECORD_SECONDS = 5.0
 SAMPLE_RATE = 16000
 
+# espeak-ng returns when it has handed audio to the USB speakerphone, not when the
+# speakerphone has finished playing it. Without a guard the tail of "Repeat: ..." is
+# still sounding when the capture window opens, and the SP300U hears itself: on
+# 2026-08-24 the near-homophone control transcribed as "repeat" in two of three runs,
+# scoring as a pass while nothing was actually tested.
+GUARD_SECONDS = 0.8
+
+# The grid's independent variable is distance from the SP300U speakerphone, so the mic is
+# part of the method, not a detail. sounddevice's default input resolves through ALSA
+# "default" -> pulse -> whatever pulse picks, and the Pi has a second microphone in the
+# C920. Card numbers also move across reboots (the SP300U was card 3 in July and card 2 on
+# 2026-08-24). An unpinned default would silently make "3m from the speakerphone" mean
+# "3m from the webcam", and the manifest would not say so.
+DEFAULT_INPUT_DEVICE = "SP300U"
+
+
+def pick_capture_rate(supported, device_default: float, wanted: int = 16000) -> int:
+    """Choose the rate to actually record at.
+
+    Vosk wants 16 kHz, but a pinned *hardware* device offers only what the hardware
+    offers — the SP300U accepts 48000 and nothing else. sounddevice's "default" device
+    hid this because pulse resamples silently; pinning the mic (which the method
+    requires) means negotiating the rate ourselves. ``supported`` is a predicate taking
+    a rate and returning whether the device accepts it.
+    """
+    if supported(wanted):
+        return wanted
+    return int(device_default)
+
+
+def to_vosk_rate(audio, from_rate: int, to_rate: int = 16000):
+    """Resample int16 mono audio to ``to_rate``. Identity when the rates already match.
+
+    Prefers scipy's polyphase resampler (properly anti-aliased). Falls back to a box
+    filter for integer ratios — averaging N samples both low-passes and decimates, which
+    is crude but does not alias speech down into the band Vosk reads. A last-resort
+    linear interpolation covers non-integer ratios.
+    """
+    import numpy as np
+
+    x = np.asarray(audio, dtype=np.float32).reshape(-1)
+    if int(from_rate) == int(to_rate):
+        return np.clip(np.round(x), -32768, 32767).astype(np.int16)
+
+    try:
+        from math import gcd
+
+        from scipy.signal import resample_poly
+        g = gcd(int(from_rate), int(to_rate))
+        y = resample_poly(x, int(to_rate) // g, int(from_rate) // g)
+    except ImportError:
+        if int(from_rate) % int(to_rate) == 0:
+            n = int(from_rate) // int(to_rate)
+            usable = (len(x) // n) * n
+            y = x[:usable].reshape(-1, n).mean(axis=1)
+        else:
+            new_len = int(round(len(x) * to_rate / from_rate))
+            y = np.interp(np.linspace(0, len(x) - 1, new_len), np.arange(len(x)), x)
+
+    return np.clip(np.round(y), -32768, 32767).astype(np.int16)
+
+
+def resolve_input_device(spec: str, devices: list[dict]) -> tuple[int, str]:
+    """Resolve ``spec`` (an index, or a case-insensitive name substring) to (index, name).
+
+    Only devices with input channels are eligible. Raises ValueError listing what IS
+    available rather than falling back to a default — recording the wrong microphone
+    invalidates a session silently, which is worse than not recording at all.
+    """
+    inputs = [(i, d) for i, d in enumerate(devices) if d.get("max_input_channels", 0) > 0]
+
+    if spec.isdigit():
+        idx = int(spec)
+        for i, d in inputs:
+            if i == idx:
+                return i, d["name"]
+        raise ValueError(f"device index {idx} is not an input device")
+
+    matches = [(i, d["name"]) for i, d in inputs if spec.lower() in d["name"].lower()]
+    if len(matches) == 1:
+        return matches[0]
+    available = ", ".join(f"{i}:{d['name']}" for i, d in inputs) or "none"
+    if not matches:
+        raise ValueError(f"no input device matching {spec!r}. Available: {available}")
+    raise ValueError(f"{spec!r} matches {len(matches)} devices: "
+                     + ", ".join(f"{i}:{n}" for i, n in matches))
+
+
+def save_wav(path, pcm_int16, rate: int) -> None:
+    """Write mono int16 PCM to ``path``.
+
+    The manifest records only what Vosk heard, which on 2026-08-24 made operator habit,
+    ASR error and prompt bleed indistinguishable after the fact. Keeping the audio makes
+    any disputed trial re-checkable by ear. It is the operator's own voice and
+    ``eval_voice/`` is gitignored, so the release stays features-only.
+    """
+    import wave
+
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(int(rate))
+        w.writeframes(pcm_int16.tobytes())
+
 
 def say(text: str) -> None:
     print(f"[say] {text}", flush=True)
@@ -76,6 +180,16 @@ def main() -> int:
                    help="cell label, e.g. d1m_quiet_vrishaank / d3m_tv_mom")
     p.add_argument("--model", default="models/vosk-model-small-en-us")
     p.add_argument("--record-seconds", type=float, default=RECORD_SECONDS)
+    p.add_argument("--device", default=DEFAULT_INPUT_DEVICE,
+                   help="input device index or name substring (default: the SP300U)")
+    p.add_argument("--guard-seconds", type=float, default=GUARD_SECONDS,
+                   help="silence after the cue before recording, so playback drains")
+    p.add_argument("--posture", required=True, choices=["standing", "seated"],
+                   help="operator posture — recorded per trial, not inferred from the label")
+    p.add_argument("--position", required=True,
+                   help="measured operator position, e.g. '1m mark' or '36in'")
+    p.add_argument("--keep-audio", action="store_true", default=True,
+                   help="save each trial's audio next to the manifest (default: on)")
     args = p.parse_args()
 
     import numpy as np
@@ -83,6 +197,23 @@ def main() -> int:
     from vosk import Model, SetLogLevel
 
     SetLogLevel(-1)
+
+    dev_index, dev_name = resolve_input_device(args.device, list(sd.query_devices()))
+
+    def _supported(rate: int) -> bool:
+        try:
+            sd.check_input_settings(device=dev_index, samplerate=rate,
+                                    channels=1, dtype="int16")
+            return True
+        except Exception:
+            return False
+
+    capture_rate = pick_capture_rate(
+        _supported, sd.query_devices(dev_index)["default_samplerate"], SAMPLE_RATE)
+    note = "" if capture_rate == SAMPLE_RATE else f" (resampled to {SAMPLE_RATE})"
+    print(f"[voice] recording from device {dev_index}: {dev_name} "
+          f"@ {capture_rate} Hz{note}", flush=True)
+
     model = Model(args.model)
 
     session = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -103,10 +234,14 @@ def main() -> int:
         say(f'Repeat: "{utterance}"')
         time.sleep(0.6)
         subprocess.run(["espeak-ng", "-s", "300", "-p", "80", "go"], check=False)
-        audio = sd.rec(int(args.record_seconds * SAMPLE_RATE), samplerate=SAMPLE_RATE,
-                       channels=1, dtype="int16")
+        time.sleep(args.guard_seconds)   # let the speakerphone stop talking before we listen
+        audio = sd.rec(int(args.record_seconds * capture_rate), samplerate=capture_rate,
+                       channels=1, dtype="int16", device=dev_index)
         sd.wait()
-        transcript = transcribe(np.asarray(audio).tobytes(), model)
+        pcm16k = to_vosk_rate(audio, capture_rate, SAMPLE_RATE)
+        if args.keep_audio:
+            save_wav(out_dir / f"trial_{i:02d}.wav", pcm16k, SAMPLE_RATE)
+        transcript = transcribe(pcm16k.tobytes(), model)
 
         wake_detected = DEFAULT_WAKE_WORD in transcript.lower()
         parsed = (parse_intent(strip_wake_word(transcript, DEFAULT_WAKE_WORD)).intent.value
@@ -117,7 +252,8 @@ def main() -> int:
         print(f"  [{i+1:02d}/{len(SCRIPT)}] heard='{transcript}' wake={wake_detected} "
               f"intent={parsed or '-'} {'OK' if ok else 'MISS'}", flush=True)
         w.writerow([args.condition, session, i, utterance, expected_intent or "",
-                    int(wake_expected), transcript, int(wake_detected), parsed, int(ok)])
+                    int(wake_expected), transcript, int(wake_detected), parsed, int(ok),
+                    dev_name, capture_rate, args.posture, args.position])
         mf.flush()
 
     mf.close()

@@ -83,8 +83,43 @@ def test_visibility_omitted_keeps_original_behavior():
 
 
 def test_lying_detected_regardless_of_leg_visibility():
-    vis = {k: 0.01 for k in LYING}  # legs invisible, but torso says lying
+    # Legs invisible, but the torso IS seen and says lying. (The fixture used to set
+    # every landmark to 0.01, including the torso, which contradicted its own name once
+    # the torso gate landed.)
+    vis = {k: 0.01 for k in LYING}
+    for name in ("left_shoulder", "right_shoulder", "left_hip", "right_hip"):
+        vis[name] = 0.9
     assert classify_posture(LYING, visibility=vis, min_visibility=0.5) == Posture.LYING
+
+
+def test_invisible_torso_is_unknown_not_lying():
+    """Aug 24 false-fall guard: a torso MediaPipe is guessing must not read as LYING.
+
+    Aimed down at the medication station the camera sees a forearm; MediaPipe still
+    emits all 33 landmarks, inventing the torso. Those invented coordinates trip the
+    inverted-torso rule, which is how a bottle pickup produced a possible_fall.
+    """
+    vis = {k: 0.01 for k in LYING}  # nothing is really visible, torso included
+    assert classify_posture(LYING, visibility=vis, min_visibility=0.5) == Posture.UNKNOWN
+
+
+def test_invisible_torso_is_unknown_even_when_upright():
+    vis = {k: 0.01 for k in STANDING}
+    assert classify_posture(STANDING, visibility=vis, min_visibility=0.5) == Posture.UNKNOWN
+
+
+def test_partially_visible_torso_is_unknown():
+    # One hip below threshold is enough: the hip midpoint would be half-invented.
+    vis = {k: 0.9 for k in LYING}
+    vis["right_hip"] = 0.2
+    assert classify_posture(LYING, visibility=vis, min_visibility=0.5) == Posture.UNKNOWN
+
+
+def test_torso_gate_respects_min_visibility_setting():
+    # A lower bar admits the same frame the default bar rejects.
+    vis = {k: 0.3 for k in LYING}
+    assert classify_posture(LYING, visibility=vis, min_visibility=0.5) == Posture.UNKNOWN
+    assert classify_posture(LYING, visibility=vis, min_visibility=0.2) == Posture.LYING
 
 
 def test_monitor_fires_after_threshold():
