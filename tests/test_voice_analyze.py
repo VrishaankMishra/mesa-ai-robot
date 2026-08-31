@@ -71,7 +71,7 @@ def test_name_match_is_case_insensitive():
 
 
 def test_card_number_change_does_not_break_the_match():
-    """The SP300U was card 3 in July and card 2 on 2026-08-24; name matching survives that."""
+    """The SP300U was card 3 in July and card 2 on 2026-08-27; name matching survives that."""
     moved = [dict(d) for d in DEVICES]
     moved[0]["name"] = "SPEAKPHONE SP300U: USB Audio (hw:5,0)"
     assert resolve_input_device("SP300U", moved)[0] == 0
@@ -171,7 +171,7 @@ def test_save_wav_roundtrips_pcm(tmp_path):
 
 
 def test_manifest_carries_posture_and_position():
-    """The 2026-08-24 pilot was read as a distance sweep because the condition string was
+    """The 2026-08-27 pilot was read as a distance sweep because the condition string was
     the only record of where the operator stood. Provenance now travels per row."""
     rows = [{
         "condition": "d1m_quiet_vrishaank", "wake_expected": "1", "wake_detected": "1",
