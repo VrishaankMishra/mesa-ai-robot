@@ -3,7 +3,7 @@
 The C920 ships with auto-exposure, auto-white-balance and continuous autofocus all on.
 That is the right default for a video call and the wrong one here: MeSA watches a fixed
 medication station, so every automatic adjustment is the camera silently changing the
-very thing the detector was trained on. Measured 2026-08-24 on the Pi — ``auto_exposure``
+very thing the detector was trained on. Measured 2026-08-27 on the Pi — ``auto_exposure``
 in Aperture Priority, ``white_balance_automatic`` on, ``focus_automatic_continuous`` on,
 and ``exposure_dynamic_framerate`` on (the camera is free to drop FPS in dim light, which
 is exactly where posture already struggles).

@@ -81,7 +81,7 @@ def classify_posture(
     if not _have(landmarks, "left_shoulder", "right_shoulder", "left_hip", "right_hip"):
         return Posture.UNKNOWN
 
-    # Torso gate (Aug 24): MediaPipe returns all 33 landmarks once it thinks it has
+    # Torso gate (Aug 27): MediaPipe returns all 33 landmarks once it thinks it has
     # found a person, guessing the ones it cannot see. Aimed down at the medication
     # station the camera sees a forearm, not a body — the torso landmarks are then
     # invented, and an invented shoulder/hip pair trips the inverted-torso rule below

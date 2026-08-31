@@ -9,13 +9,13 @@ per cell.
 
 distance {1m, 2m, 3m} × noise {quiet, tv} × speaker {vrishaank, mom, (+1 optional)}
 
-- Mark 1m / 2m / 3m from the SP300U speakerphone with tape (one-time). **Done 2026-08-24.**
+- Mark 1m / 2m / 3m from the SP300U speakerphone with tape (one-time). **Done 2026-08-27.**
 - **The microphone is pinned by name, not by index.** The capture script resolves the
   SP300U by name substring and refuses to run if it cannot find exactly one match; the
   device it used is printed at session start and written into every manifest row. This is
   method, not plumbing: sounddevice's default input resolves through ALSA `default` to
   whatever pulse picks, the Pi has a second mic in the C920, and card numbers move across
-  reboots (the SP300U was card 3 in July and card 2 on 2026-08-24). An unpinned default
+  reboots (the SP300U was card 3 in July and card 2 on 2026-08-27). An unpinned default
   would make "3m from the speakerphone" silently mean "3m from the webcam". Override with
   `--device` only when deliberately changing microphones — and say so in the paper.
 - `tv` cells: the same audio source at the same volume every time (pick a show, note
@@ -28,7 +28,7 @@ distance {1m, 2m, 3m} × noise {quiet, tv} × speaker {vrishaank, mom, (+1 optio
     --posture standing --position "1m mark"
 ```
 
-`--posture` and `--position` are **required**: on 2026-08-24 three sessions were labelled
+`--posture` and `--position` are **required**: on 2026-08-27 three sessions were labelled
 `d1m`/`d2m`/`d3m` and read as a distance sweep when all three had in fact been run from one
 seated position. The condition string is a filename, not evidence — where the operator was
 is now recorded per trial, from the room. Each trial's audio is also saved beside the
@@ -51,7 +51,7 @@ Per-cell: wake rate, false-wake rate, intent accuracy given wake, exact rate →
 `docs/eval/voice_grid_results.csv`. ~2 hours total across a few days completes the grid.
 
 
-## Pilot round — 2026-08-24 (NOT grid data — one condition, three repeats)
+## Pilot round — 2026-08-27 (NOT grid data — one condition, three repeats)
 
 Three quiet sessions were run end-to-end as a **pilot**, to shake out the protocol rather than
 to measure the system. Their condition labels carry a `_pilot` suffix *inside the manifests* as
