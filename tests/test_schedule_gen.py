@@ -78,7 +78,7 @@ TRAINED_MED_CLASSES = {
 
 
 def test_station_csv_names_match_the_trained_classes():
-    """Regression guard for the mismatch found 2026-08-24.
+    """Regression guard for the mismatch found 2026-08-27.
 
     examples/prescriptions.csv is a generic sample (Tylenol, Ibuprofen, ...) whose names
     match no trained class, so loading it leaves the schedule and the detector speaking
