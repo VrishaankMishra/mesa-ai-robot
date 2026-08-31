@@ -19,11 +19,15 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Import prescription CSV -> schedule")
     p.add_argument("csv", help="path to prescription CSV")
     p.add_argument("--db", default="events.db")
+    p.add_argument("--replace", action="store_true",
+                   help="clear the existing schedule first (re-import without duplicating)")
     args = p.parse_args()
 
     text = Path(args.csv).read_text(encoding="utf-8")
     entries = parse_prescription_csv(text)
     db = Database(args.db)
+    if args.replace:
+        print(f"Cleared {db.clear_schedule()} existing schedule entries.")
     n = load_into_db(db, entries)
     db.close()
     print(f"Loaded {n} schedule entries from {args.csv} into {args.db}.")

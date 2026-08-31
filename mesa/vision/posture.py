@@ -71,13 +71,26 @@ def classify_posture(
     left/right_shoulder, left/right_hip, left/right_knee, left/right_ankle.
 
     If ``visibility`` (per-landmark confidence in 0..1, e.g. MediaPipe's
-    ``landmark.visibility``) is supplied, leg landmarks below ``min_visibility``
-    are treated as *not seen* — so an off-screen leg whose position MediaPipe is
+    ``landmark.visibility``) is supplied, a torso whose shoulders or hips fall below
+    ``min_visibility`` yields UNKNOWN rather than a guess, and leg landmarks below
+    ``min_visibility`` are treated as *not seen* — so an off-screen leg whose position MediaPipe is
     merely guessing can't fabricate a bogus knee angle (and thus a false
     "sitting"). With legs unavailable we fall back to torso-only (=> standing
     when upright). Omitting ``visibility`` keeps the original behaviour.
     """
     if not _have(landmarks, "left_shoulder", "right_shoulder", "left_hip", "right_hip"):
+        return Posture.UNKNOWN
+
+    # Torso gate (Aug 24): MediaPipe returns all 33 landmarks once it thinks it has
+    # found a person, guessing the ones it cannot see. Aimed down at the medication
+    # station the camera sees a forearm, not a body — the torso landmarks are then
+    # invented, and an invented shoulder/hip pair trips the inverted-torso rule below
+    # and reports LYING. Two research clips that day held a skeleton in 4 of 41 frames
+    # yet produced a spurious possible_fall. Refuse to classify a torso we cannot see.
+    if visibility is not None and any(
+        visibility.get(name, 0.0) < min_visibility
+        for name in ("left_shoulder", "right_shoulder", "left_hip", "right_hip")
+    ):
         return Posture.UNKNOWN
 
     shoulder = _midpoint(landmarks["left_shoulder"], landmarks["right_shoulder"])
