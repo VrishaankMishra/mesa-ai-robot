@@ -182,3 +182,33 @@ def test_get_clips_filters(db):
     assert db.get_clips(label_a="no_interaction")[0]["path"] == "b.npz"
     # oldest-first ordering
     assert [c["path"] for c in db.get_clips()] == ["a.npz", "b.npz"]
+
+
+def test_clear_schedule_removes_every_row(tmp_path):
+    db = Database(tmp_path / "t.db")
+    db.add_medication("advil")
+    db.add_medication("melatonin")
+    db.add_schedule("advil", "13:00", "1 tablet")
+    db.add_schedule("melatonin", "22:00", "1 gummy")
+    assert len(db.get_schedule()) == 2
+
+    assert db.clear_schedule() == 2
+    assert db.get_schedule() == []
+    db.close()
+
+
+def test_clear_schedule_on_empty_schedule_is_zero(tmp_path):
+    db = Database(tmp_path / "t.db")
+    assert db.clear_schedule() == 0
+    db.close()
+
+
+def test_reimport_after_clear_does_not_duplicate(tmp_path):
+    """Retuning dose times at the station is a re-import; it must not stack copies."""
+    db = Database(tmp_path / "t.db")
+    db.add_medication("advil")
+    for _ in range(2):
+        db.clear_schedule()
+        db.add_schedule("advil", "13:00", "1 tablet")
+    assert len(db.get_schedule()) == 1
+    db.close()

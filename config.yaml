@@ -7,6 +7,19 @@ vision:
   frame_height: 480
   detection_every_n_frames: 3   # run YOLO on every Nth frame; pose runs every frame
   presence_check_seconds: 1.0   # how often the vision worker publishes person-present
+  # Camera control locking (VIS-011). The C920 defaults to auto-exposure, auto-white-
+  # balance and continuous autofocus — every one of them silently changes what the
+  # detector sees. Set the values AT the station under demo lighting: leave a value
+  # null and MeSA locks whatever the camera's own auto pass chose at startup.
+  camera:
+    enabled: false            # flip to true once the values below are set at the station
+    device: /dev/video0       # for the v4l2-only dynamic-framerate control
+    lock_exposure: true
+    exposure: null            # null => freeze the auto-chosen exposure at startup
+    lock_white_balance: true
+    white_balance: null       # Kelvin, 2000-6500 (C920 range)
+    lock_focus: true
+    focus: 0                  # 0-250 step 5; 0 = far focus, right for a fixed station
 
 detection:
   model_path: models/best.pt
