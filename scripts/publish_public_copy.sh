@@ -17,6 +17,8 @@ EXCLUDE_PATHS=(
   docs/engineering-notebook.md
   docs/eval/val_batch0_pred.jpg
   scripts/make_paper_pdf.py
+  scripts/make_urtc_poster.py
+  scripts/make_poster_figures.py
 )
 # Secret strings rewritten across all history (literal==>replacement per line).
 REPLACEMENTS="$(mktemp)"
