@@ -148,6 +148,17 @@ class Database:
     def get_schedule(self) -> list[sqlite3.Row]:
         return list(self.conn.execute("SELECT * FROM schedule ORDER BY time_of_day"))
 
+    def clear_schedule(self) -> int:
+        """Delete every schedule row. Returns how many were removed.
+
+        Re-importing a prescription CSV is the normal way to retune dose times at the
+        station, and without this each import stacks another copy of every dose —
+        which "what is my next medication" would then answer from.
+        """
+        cur = self.conn.execute("DELETE FROM schedule")
+        self.conn.commit()
+        return cur.rowcount
+
     # --- events ---
     def log_event(
         self,

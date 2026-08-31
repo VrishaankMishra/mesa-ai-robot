@@ -92,6 +92,9 @@ class VisionWorker(threading.Thread):
             cap = cv2.VideoCapture(self.camera_index)
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
+            from mesa.vision.camera import configure_capture, disable_dynamic_framerate
+            if configure_capture(cap, self.cfg, cv2_module=cv2):
+                disable_dynamic_framerate(get(self.cfg, "vision.camera.device", "/dev/video0"))
         if not cap.isOpened():
             raise RuntimeError(f"vision worker: could not open camera {self.camera_index}")
 
