@@ -93,7 +93,7 @@ def test_lying_detected_regardless_of_leg_visibility():
 
 
 def test_invisible_torso_is_unknown_not_lying():
-    """Aug 24 false-fall guard: a torso MediaPipe is guessing must not read as LYING.
+    """Aug 27 false-fall guard: a torso MediaPipe is guessing must not read as LYING.
 
     Aimed down at the medication station the camera sees a forearm; MediaPipe still
     emits all 33 landmarks, inventing the torso. Those invented coordinates trip the
