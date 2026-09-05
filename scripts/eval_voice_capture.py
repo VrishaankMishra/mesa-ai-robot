@@ -71,6 +71,18 @@ GUARD_SECONDS = 0.8
 # "3m from the webcam", and the manifest would not say so.
 DEFAULT_INPUT_DEVICE = "SP300U"
 
+# One source of truth for the manifest schema. Header and row were written from two
+# separate literals until 2026-09-05, when merging vision/demo-hardening into main took
+# the older header and kept the newer row: every row carried device, capture_hz, posture
+# and position, and the header labelled none of them. The provenance columns added to
+# stop a session being mislabelled were themselves unreadable by name. csv.DictWriter
+# now makes a header/row mismatch impossible rather than merely unlikely.
+MANIFEST_COLUMNS = [
+    "condition", "session", "trial", "prompt", "expected_intent", "wake_expected",
+    "transcript", "wake_detected", "parsed_intent", "exact_wake_and_intent",
+    "device", "capture_hz", "posture", "position",
+]
+
 
 def pick_capture_rate(supported, device_default: float, wanted: int = 16000) -> int:
     """Choose the rate to actually record at.
@@ -142,6 +154,28 @@ def resolve_input_device(spec: str, devices: list[dict]) -> tuple[int, str]:
         raise ValueError(f"no input device matching {spec!r}. Available: {available}")
     raise ValueError(f"{spec!r} matches {len(matches)} devices: "
                      + ", ".join(f"{i}:{n}" for i, n in matches))
+
+
+def run_trial_cue(say_fn, beep_fn, sleep_fn, record_fn, guard_seconds: float):
+    """Prompt, drain, cue, record — strictly in that order.
+
+    The guard belongs between the PROMPT and the CUE. On 2026-09-05 it sat between the
+    cue and the recording instead: the operator heard "go", began speaking immediately,
+    and the microphone opened ~0.8 s later. The wake word was lost in all fifteen
+    wake-expected trials (3/18 overall, 0% wake detection, against 73% in the pilot).
+    The signature was unmistakable — everything *after* "mesa" transcribed correctly and
+    the wake word came through as its own tail: "the", "so", "it's".
+
+    A silence long enough to stop the speakerphone talking is also long enough to miss a
+    person who was told to speak on the beep. Draining and cueing are different jobs and
+    they cannot share one delay.
+
+    Callables are injected so the ordering is unit-tested without a microphone.
+    """
+    say_fn()
+    sleep_fn(guard_seconds)   # speakerphone finishes the prompt before we cue
+    beep_fn()
+    return record_fn()        # microphone opens ON the cue, not after it
 
 
 def save_wav(path, pcm_int16, rate: int) -> None:
@@ -220,10 +254,8 @@ def main() -> int:
     out_dir = OUT_ROOT / args.condition / session
     out_dir.mkdir(parents=True, exist_ok=True)
     mf = open(out_dir / "manifest.csv", "w", newline="")
-    w = csv.writer(mf)
-    w.writerow(["condition", "session", "trial", "prompt", "expected_intent",
-                "wake_expected", "transcript", "wake_detected", "parsed_intent",
-                "exact_wake_and_intent"])
+    w = csv.DictWriter(mf, fieldnames=MANIFEST_COLUMNS)
+    w.writeheader()
 
     say(f"Voice evaluation, condition {args.condition.replace('_', ' ')}. "
         "After each beep, repeat the phrase exactly, at a normal speaking voice.")
@@ -231,13 +263,20 @@ def main() -> int:
 
     correct = 0
     for i, (utterance, expected_intent, wake_expected) in enumerate(SCRIPT):
-        say(f'Repeat: "{utterance}"')
-        time.sleep(0.6)
-        subprocess.run(["espeak-ng", "-s", "300", "-p", "80", "go"], check=False)
-        time.sleep(args.guard_seconds)   # let the speakerphone stop talking before we listen
-        audio = sd.rec(int(args.record_seconds * capture_rate), samplerate=capture_rate,
+        def _record():
+            a = sd.rec(int(args.record_seconds * capture_rate), samplerate=capture_rate,
                        channels=1, dtype="int16", device=dev_index)
-        sd.wait()
+            sd.wait()
+            return a
+
+        audio = run_trial_cue(
+            say_fn=lambda: say(f'Repeat: "{utterance}"'),
+            beep_fn=lambda: subprocess.run(
+                ["espeak-ng", "-s", "300", "-p", "80", "go"], check=False),
+            sleep_fn=time.sleep,
+            record_fn=_record,
+            guard_seconds=args.guard_seconds,
+        )
         pcm16k = to_vosk_rate(audio, capture_rate, SAMPLE_RATE)
         if args.keep_audio:
             save_wav(out_dir / f"trial_{i:02d}.wav", pcm16k, SAMPLE_RATE)
@@ -251,9 +290,15 @@ def main() -> int:
         correct += int(ok)
         print(f"  [{i+1:02d}/{len(SCRIPT)}] heard='{transcript}' wake={wake_detected} "
               f"intent={parsed or '-'} {'OK' if ok else 'MISS'}", flush=True)
-        w.writerow([args.condition, session, i, utterance, expected_intent or "",
-                    int(wake_expected), transcript, int(wake_detected), parsed, int(ok),
-                    dev_name, capture_rate, args.posture, args.position])
+        w.writerow({
+            "condition": args.condition, "session": session, "trial": i,
+            "prompt": utterance, "expected_intent": expected_intent or "",
+            "wake_expected": int(wake_expected), "transcript": transcript,
+            "wake_detected": int(wake_detected), "parsed_intent": parsed,
+            "exact_wake_and_intent": int(ok), "device": dev_name,
+            "capture_hz": capture_rate, "posture": args.posture,
+            "position": args.position,
+        })
         mf.flush()
 
     mf.close()

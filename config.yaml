@@ -67,7 +67,11 @@ hardware:
 # Research extension — pre-event feature capture (DATA-001/RES-001).
 # Off by default so the build/demos carry zero overhead. See docs/research-dataset-design.md.
 research:
-  enabled: true               # DATA-002 live since 2026-08-10: passive self-labeling capture
+  enabled: false              # OFF 2026-09-05 until the pose-channel question is settled:
+                              # clips carry almost no skeleton (clip 1: 4 real frames of 32,
+                              # clip 2: 0 of 32) because the 40-45 deg top-down MED geometry
+                              # starves MediaPipe, and both clip_to_stgcn and the wrist->bottle
+                              # baseline read that channel. Leaving it on banks unusable clips.
   clips_dir: data/clips       # where .npz clips are written (git-ignored)
   buffer_seconds: 6           # ring-buffer length; >= max sweep window so N is chosen offline
   max_bottles: 5              # K: object-array slots per frame
