@@ -100,3 +100,41 @@ an uncontrolled variable riding along with distance.
    voice, `eval_voice/` is gitignored, privacy stance unchanged).
 
 **Also still open:** the `tv` volume step is unchosen, so no `tv` cell can start.
+
+
+## Quiet cells complete — 2026-09-05 (real grid data)
+
+Three quiet cells run standing at the taped marks, replacing the deleted Aug 27 pilot.
+Provenance is stamped per row (`posture=standing`, `position`, device, capture rate) and
+each trial's audio is saved beside its manifest.
+
+| cell | wake | false-wake | intent given wake | exact |
+|------|------|-----------|-------------------|-------|
+| `d1m_quiet_vrishaank` | 73% | 0% | 82% | 67% |
+| `d2m_quiet_vrishaank` | 67% | 0% | 80% | 61% |
+| `d3m_quiet_vrishaank` | 73% | 0% | 91% | 72% |
+
+**Distance does not measurably affect performance between 1 m and 3 m in a quiet room.**
+Wake rate spans 6 points against the pilot's 7-point test-retest floor; exact rate spans
+11 against a 17-point floor. Both differences sit inside the noise, so neither is an
+effect. (The August pilot appeared to show the same thing, but could not support it —
+those were three repeats of one seated position.)
+
+**The wake word is the bottleneck, not range.** Recognition sits near 70% and fails by
+homophone substitution: "MeSA" transcribed as `may so`, `made so`, `mr`, `ms raisa`,
+`minister`. Intent parsing given a detected wake is 80–91%, so the failure is upstream of
+intent every time. False-wake was 0% in all three cells, including the near-homophone
+control, which now genuinely exercises the wake word (no prompt bleed in any of the 54
+trials).
+
+**Demo implication:** at ~70% wake rate roughly one command in three needs repeating.
+VOX-005 targets 90%+ at 1–2 m, so the gap is real and it is a wake-word problem — a
+"say again?" fallback is necessary but not sufficient.
+
+**Two harness defects were found and fixed during this session** (see `fix/voice-cue-order`):
+the 0.8 s guard sat between the cue and the recording rather than between the prompt and
+the cue, so the operator spoke into a closed microphone — 3/18 with 0% wake detection
+before the fix. And the manifest header had drifted four columns short of the row, so the
+provenance fields were written but unlabelled; the writer is now schema-driven.
+
+**Still blocked:** the `tv` volume step (6 cells) and SRC approval (Mom's cells).

@@ -184,3 +184,57 @@ def test_manifest_carries_posture_and_position():
 
 def test_guard_default_is_long_enough_to_drain_a_prompt():
     assert _capture.GUARD_SECONDS >= 0.5
+
+
+# --- trial cue ordering (RES-004) --------------------------------------------------
+
+def test_guard_runs_before_the_cue_not_after_it():
+    """The 2026-09-05 regression: guard after the cue cost every wake word in the cell.
+
+    Order must be prompt -> drain -> cue -> record. If the sleep lands between the beep
+    and the recording, the operator speaks into a closed microphone.
+    """
+    calls = []
+    _capture.run_trial_cue(
+        say_fn=lambda: calls.append("say"),
+        beep_fn=lambda: calls.append("beep"),
+        sleep_fn=lambda s: calls.append(f"sleep{s}"),
+        record_fn=lambda: calls.append("record") or "AUDIO",
+        guard_seconds=0.8,
+    )
+    assert calls == ["say", "sleep0.8", "beep", "record"]
+    assert calls.index("sleep0.8") < calls.index("beep"), "guard must drain the prompt"
+    assert calls.index("beep") + 1 == calls.index("record"), "mic opens ON the cue"
+
+
+def test_trial_cue_returns_the_recording():
+    got = _capture.run_trial_cue(lambda: None, lambda: None, lambda s: None,
+                                 lambda: "PCM", 0.8)
+    assert got == "PCM"
+
+
+def test_no_sleep_between_cue_and_recording():
+    calls = []
+    _capture.run_trial_cue(lambda: calls.append("say"), lambda: calls.append("beep"),
+                           lambda s: calls.append("sleep"), lambda: calls.append("record"),
+                           0.8)
+    assert "sleep" not in calls[calls.index("beep"):], "a delay after the cue clips speech"
+
+
+# --- manifest schema (RES-004) -----------------------------------------------------
+
+def test_manifest_schema_covers_every_provenance_column():
+    """Header and row drifted apart in the PR #38 merge; the columns added to stop a
+    session being mislabelled were written but never labelled."""
+    for col in ("device", "capture_hz", "posture", "position"):
+        assert col in _capture.MANIFEST_COLUMNS
+
+
+def test_manifest_columns_match_what_the_analyzer_reads():
+    needed = {"condition", "wake_expected", "wake_detected", "parsed_intent",
+              "expected_intent", "exact_wake_and_intent"}
+    assert needed <= set(_capture.MANIFEST_COLUMNS)
+
+
+def test_manifest_columns_are_unique():
+    assert len(_capture.MANIFEST_COLUMNS) == len(set(_capture.MANIFEST_COLUMNS))
