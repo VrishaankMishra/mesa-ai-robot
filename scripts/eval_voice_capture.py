@@ -144,6 +144,28 @@ def resolve_input_device(spec: str, devices: list[dict]) -> tuple[int, str]:
                      + ", ".join(f"{i}:{n}" for i, n in matches))
 
 
+def run_trial_cue(say_fn, beep_fn, sleep_fn, record_fn, guard_seconds: float):
+    """Prompt, drain, cue, record — strictly in that order.
+
+    The guard belongs between the PROMPT and the CUE. On 2026-09-05 it sat between the
+    cue and the recording instead: the operator heard "go", began speaking immediately,
+    and the microphone opened ~0.8 s later. The wake word was lost in all fifteen
+    wake-expected trials (3/18 overall, 0% wake detection, against 73% in the pilot).
+    The signature was unmistakable — everything *after* "mesa" transcribed correctly and
+    the wake word came through as its own tail: "the", "so", "it's".
+
+    A silence long enough to stop the speakerphone talking is also long enough to miss a
+    person who was told to speak on the beep. Draining and cueing are different jobs and
+    they cannot share one delay.
+
+    Callables are injected so the ordering is unit-tested without a microphone.
+    """
+    say_fn()
+    sleep_fn(guard_seconds)   # speakerphone finishes the prompt before we cue
+    beep_fn()
+    return record_fn()        # microphone opens ON the cue, not after it
+
+
 def save_wav(path, pcm_int16, rate: int) -> None:
     """Write mono int16 PCM to ``path``.
 
@@ -231,13 +253,20 @@ def main() -> int:
 
     correct = 0
     for i, (utterance, expected_intent, wake_expected) in enumerate(SCRIPT):
-        say(f'Repeat: "{utterance}"')
-        time.sleep(0.6)
-        subprocess.run(["espeak-ng", "-s", "300", "-p", "80", "go"], check=False)
-        time.sleep(args.guard_seconds)   # let the speakerphone stop talking before we listen
-        audio = sd.rec(int(args.record_seconds * capture_rate), samplerate=capture_rate,
+        def _record():
+            a = sd.rec(int(args.record_seconds * capture_rate), samplerate=capture_rate,
                        channels=1, dtype="int16", device=dev_index)
-        sd.wait()
+            sd.wait()
+            return a
+
+        audio = run_trial_cue(
+            say_fn=lambda: say(f'Repeat: "{utterance}"'),
+            beep_fn=lambda: subprocess.run(
+                ["espeak-ng", "-s", "300", "-p", "80", "go"], check=False),
+            sleep_fn=time.sleep,
+            record_fn=_record,
+            guard_seconds=args.guard_seconds,
+        )
         pcm16k = to_vosk_rate(audio, capture_rate, SAMPLE_RATE)
         if args.keep_audio:
             save_wav(out_dir / f"trial_{i:02d}.wav", pcm16k, SAMPLE_RATE)
