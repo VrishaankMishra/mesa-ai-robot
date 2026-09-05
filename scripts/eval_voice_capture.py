@@ -71,6 +71,18 @@ GUARD_SECONDS = 0.8
 # "3m from the webcam", and the manifest would not say so.
 DEFAULT_INPUT_DEVICE = "SP300U"
 
+# One source of truth for the manifest schema. Header and row were written from two
+# separate literals until 2026-09-05, when merging vision/demo-hardening into main took
+# the older header and kept the newer row: every row carried device, capture_hz, posture
+# and position, and the header labelled none of them. The provenance columns added to
+# stop a session being mislabelled were themselves unreadable by name. csv.DictWriter
+# now makes a header/row mismatch impossible rather than merely unlikely.
+MANIFEST_COLUMNS = [
+    "condition", "session", "trial", "prompt", "expected_intent", "wake_expected",
+    "transcript", "wake_detected", "parsed_intent", "exact_wake_and_intent",
+    "device", "capture_hz", "posture", "position",
+]
+
 
 def pick_capture_rate(supported, device_default: float, wanted: int = 16000) -> int:
     """Choose the rate to actually record at.
@@ -242,10 +254,8 @@ def main() -> int:
     out_dir = OUT_ROOT / args.condition / session
     out_dir.mkdir(parents=True, exist_ok=True)
     mf = open(out_dir / "manifest.csv", "w", newline="")
-    w = csv.writer(mf)
-    w.writerow(["condition", "session", "trial", "prompt", "expected_intent",
-                "wake_expected", "transcript", "wake_detected", "parsed_intent",
-                "exact_wake_and_intent"])
+    w = csv.DictWriter(mf, fieldnames=MANIFEST_COLUMNS)
+    w.writeheader()
 
     say(f"Voice evaluation, condition {args.condition.replace('_', ' ')}. "
         "After each beep, repeat the phrase exactly, at a normal speaking voice.")
@@ -280,9 +290,15 @@ def main() -> int:
         correct += int(ok)
         print(f"  [{i+1:02d}/{len(SCRIPT)}] heard='{transcript}' wake={wake_detected} "
               f"intent={parsed or '-'} {'OK' if ok else 'MISS'}", flush=True)
-        w.writerow([args.condition, session, i, utterance, expected_intent or "",
-                    int(wake_expected), transcript, int(wake_detected), parsed, int(ok),
-                    dev_name, capture_rate, args.posture, args.position])
+        w.writerow({
+            "condition": args.condition, "session": session, "trial": i,
+            "prompt": utterance, "expected_intent": expected_intent or "",
+            "wake_expected": int(wake_expected), "transcript": transcript,
+            "wake_detected": int(wake_detected), "parsed_intent": parsed,
+            "exact_wake_and_intent": int(ok), "device": dev_name,
+            "capture_hz": capture_rate, "posture": args.posture,
+            "position": args.position,
+        })
         mf.flush()
 
     mf.close()

@@ -219,3 +219,22 @@ def test_no_sleep_between_cue_and_recording():
                            lambda s: calls.append("sleep"), lambda: calls.append("record"),
                            0.8)
     assert "sleep" not in calls[calls.index("beep"):], "a delay after the cue clips speech"
+
+
+# --- manifest schema (RES-004) -----------------------------------------------------
+
+def test_manifest_schema_covers_every_provenance_column():
+    """Header and row drifted apart in the PR #38 merge; the columns added to stop a
+    session being mislabelled were written but never labelled."""
+    for col in ("device", "capture_hz", "posture", "position"):
+        assert col in _capture.MANIFEST_COLUMNS
+
+
+def test_manifest_columns_match_what_the_analyzer_reads():
+    needed = {"condition", "wake_expected", "wake_detected", "parsed_intent",
+              "expected_intent", "exact_wake_and_intent"}
+    assert needed <= set(_capture.MANIFEST_COLUMNS)
+
+
+def test_manifest_columns_are_unique():
+    assert len(_capture.MANIFEST_COLUMNS) == len(set(_capture.MANIFEST_COLUMNS))
