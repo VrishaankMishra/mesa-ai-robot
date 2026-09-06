@@ -32,11 +32,19 @@ def render() -> None:
     if not statuses:
         st.info("No schedule yet. Add medications + schedule rows (Week 3, ENG-001).")
     else:
-        cols = st.columns(len(statuses))
-        for col, s in zip(cols, statuses):
-            mark = "✅ Taken" if s.taken else "⏳ Not yet"
-            col.metric(label=f"{s.time_of_day} · {s.med_name}", value=mark,
-                       delta=s.dose or "", delta_color="off")
+        # Wrap into rows rather than one row of N. With a full day's schedule (11 doses
+        # on the demo station) a single row gives each column ~9% of the page and
+        # Streamlit clips the value to "Not ...", which is unreadable from an audience's
+        # distance. Five per row keeps each card wide enough to read at a glance.
+        PER_ROW = 5
+        for start in range(0, len(statuses), PER_ROW):
+            chunk = statuses[start:start + PER_ROW]
+            # Pad the final row so its cards keep the same width as the rows above.
+            cols = st.columns(PER_ROW)
+            for col, s in zip(cols, chunk):
+                mark = "✅ Taken" if s.taken else "⏳ Due"
+                col.metric(label=f"{s.time_of_day} · {s.med_name}", value=mark,
+                           delta=s.dose or "", delta_color="off")
 
     st.subheader("Recent events")
     events = db.get_events(limit=50)
