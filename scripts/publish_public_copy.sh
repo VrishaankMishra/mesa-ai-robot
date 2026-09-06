@@ -16,6 +16,8 @@ EXCLUDE_PATHS=(
   docs/proposal
   docs/engineering-notebook.md
   docs/plan-to-demo.md
+  docs/demo-runbook.md
+  docs/demo-script.md
   docs/eval/val_batch0_pred.jpg
   scripts/make_paper_pdf.py
   scripts/make_urtc_poster.py
