@@ -278,3 +278,38 @@ class TestInvertedTorso:
 
     def test_normal_upright_still_standing(self):
         assert classify_posture(self._landmarks(0.30, 0.55)) == Posture.STANDING
+
+
+# --- fall-zone diagnostic summary (VIS-010) ----------------------------------------
+
+def _summarize():
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "fall_diag", Path(__file__).resolve().parent.parent / "scripts" / "fall_diag.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m.summarize
+
+
+def test_summary_reports_the_worst_frame_not_just_the_average():
+    """A gate is decided by its worst frame; an average would hide a dropout."""
+    s = _summarize()([0.99, 0.98, 0.40, 0.99])
+    assert s["worst"] == 0.40
+    assert s["pass_rate"][0.5] == 0.75
+
+
+def test_summary_pass_rates_are_monotonic_in_threshold():
+    s = _summarize()([0.9, 0.6, 0.35, 0.15])
+    rates = [s["pass_rate"][t] for t in (0.5, 0.3, 0.2, 0.1)]
+    assert rates == sorted(rates), "a lower bar cannot admit fewer frames"
+
+
+def test_summary_handles_no_frames():
+    assert _summarize()([])["frames"] == 0
+
+
+def test_staged_lying_measurement_would_pass_the_shipped_threshold():
+    """The 2026-09-05 measurement: worst frame 0.948 against a 0.5 bar."""
+    s = _summarize()([0.948, 0.97, 0.99, 0.997, 1.0])
+    assert s["pass_rate"][0.5] == 1.0
