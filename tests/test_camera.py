@@ -115,3 +115,51 @@ def test_a_refusing_driver_does_not_raise():
 
     applied = configure_capture(Refusing(), _cfg(exposure=100), cv2_module=FakeCv2)
     assert applied  # still reports readbacks rather than blowing up the vision worker
+
+
+# --- site check scene interpretation (VIS-011 / demo prep) --------------------------
+# The Sept 13 demo is in an unmeasured room. These map scene statistics onto the
+# conditions the domain-shift grid actually measured, so the verdict is grounded in
+# this project's own data rather than in a generic "too bright / too dark".
+
+def _site():
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "site_check", Path(__file__).resolve().parent.parent / "scripts" / "site_check.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def test_blown_highlights_flag_the_direct_sun_cell():
+    """Direct sun was the worst cell in the grid; blown highlights are its signature."""
+    v = _site().verdict(median=120, blown_pct=9.0)
+    assert "BLOWN" in v and "blinds" in v.lower()
+
+
+def test_very_dim_recommends_the_lamp():
+    v = _site().verdict(median=33, blown_pct=0.1)
+    assert "lamp" in v.lower()
+
+
+def test_good_light_is_reported_as_comparable_to_measured_cells():
+    v = _site().verdict(median=110, blown_pct=0.5)
+    assert v.startswith("OK")
+
+
+def test_blown_takes_priority_over_a_healthy_median():
+    """A sunbeam on the table can leave the median looking fine."""
+    assert "BLOWN" in _site().verdict(median=105, blown_pct=7.0)
+
+
+def test_scene_stats_measure_what_they_claim():
+    import numpy as np
+    g = np.zeros((100, 100), dtype="uint8")
+    g[:10, :] = 255      # 10% blown
+    g[10:20, :] = 5      # 10% very dark
+    g[20:, :] = 128
+    s = _site().scene_stats(g)
+    assert abs(s["blown_pct"] - 10.0) < 0.01
+    assert abs(s["dark_pct"] - 10.0) < 0.01
+    assert s["median"] == 128
