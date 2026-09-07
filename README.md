@@ -35,8 +35,7 @@ protocol where scripted placement makes ground truth free** — 1,584 scored fie
 evaluations across an 8-condition lighting grid × 3 model arms, zero manual annotation,
 ~90 minutes of operator time.
 
-**Findings** (full paper: [docs/paper/domain-shift-paper.md](docs/paper/domain-shift-paper.md) ·
-data: [docs/eval/domain_shift_results.csv](docs/eval/domain_shift_results.csv) ·
+**Findings** (data: [docs/eval/domain_shift_results.csv](docs/eval/domain_shift_results.csv) ·
 figures: [docs/eval/figures/](docs/eval/figures)):
 
 - Detection collapses at **both** lighting extremes — direct morning sun is *worse than
@@ -108,19 +107,18 @@ mesa/
 └── dashboard/   app.py (Streamlit)
 scripts/   setup_env, capture, capture_guided, detect_live, pose_live, voice_loop,
            eval_capture, eval_analyze, eval_figures, benchmark, soak_test, …
-docs/      engineering-notebook.md (the day-by-day story) · eval/ (results + figures)
-           paper/ (drafts + PDFs) · demo-runbook.md · domain-shift-sessions.md
+docs/      eval/ (results + figures) · demo-runbook.md · domain-shift-sessions.md
            IMPLEMENTATION.md (ticket board) · capture-protocol.md · hardware-build.md
 deploy/    mesa.service, install_pi.sh
 ```
 
 ## Reading order for visitors
 
-1. [The engineering notebook](docs/engineering-notebook.md) — the honest day-by-day
-   build log, including everything that broke.
-2. [The paper](docs/paper/pdf/domain-shift-paper.pdf) — the study, 7 pages with figures.
-3. [The demo runbook](docs/demo-runbook.md) — how the live show runs, every staging
+1. [The domain-shift study results](docs/eval/eval-report-v1.md) — evaluation report,
+   per-condition data, and figures.
+2. [The demo runbook](docs/demo-runbook.md) — how the live show runs, every staging
    rule backed by a measurement.
+3. [The ticket board](docs/IMPLEMENTATION.md) — the 10-week plan and what's done.
 
 ## Tech
 Python 3.11/3.12 · OpenCV · Ultralytics YOLOv8 · MediaPipe · Vosk · pyttsx3 · SQLite ·
