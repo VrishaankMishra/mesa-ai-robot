@@ -105,7 +105,9 @@ def strip_wake_word(text: str, wake_word: str = DEFAULT_WAKE_WORD) -> str:
     for var in WAKE_VARIANTS:
         if var == (wake_word.lower(),):
             continue
-        alt = re.compile(rf"^\s*{r'[,\s]+'.join(re.escape(w) for w in var)}[,\s]+", re.IGNORECASE)
+        gap = r"[,\s]+"
+        joined = gap.join(re.escape(w) for w in var)
+        alt = re.compile(r"^\s*" + joined + r"[,\s]+", re.IGNORECASE)
         out = alt.sub("", text, count=1)
         if out != text:
             return out
