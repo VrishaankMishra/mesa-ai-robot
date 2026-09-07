@@ -18,7 +18,7 @@ import threading
 import time
 
 from mesa.audio.assistant import VoiceAssistant
-from mesa.audio.intents import Intent, parse_intent, strip_wake_word
+from mesa.audio.intents import Intent, matches_wake_word, parse_intent, strip_wake_word
 from mesa.engine.events import ACKNOWLEDGE, HELP_REQUEST, Event, EventBus
 
 
@@ -44,7 +44,7 @@ class AudioWorker(threading.Thread):
 
     def handle_transcript(self, transcript: str, now: float | None = None) -> bool:
         """Process one finalized transcript. Returns True if it was a wake-word command."""
-        if self.wake_word not in transcript.lower():
+        if not matches_wake_word(transcript, self.wake_word):
             return False
         now = now if now is not None else time.time()
         parsed = parse_intent(strip_wake_word(transcript, self.wake_word))
