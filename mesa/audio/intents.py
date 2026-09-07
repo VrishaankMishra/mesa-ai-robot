@@ -16,6 +16,49 @@ from enum import Enum
 
 DEFAULT_WAKE_WORD = "mesa"
 
+# Vosk splits "MAY-suh" into two words more often than it gets it whole. Measured across
+# the 2026-09-05 quiet grid (45 wake-expected trials, 13 missed), the misses were:
+#   "may so"  x6   "made so" x2   "mr" x3   "ms raisa" x1   "nice that" x1  "they saw" x1
+# Accepting the two-token variants recovers 8 of 13 and lifts wake detection from 71% to
+# 89% with no retraining.
+#
+# "mr" is deliberately EXCLUDED. It would recover three more (96%), but it is one short
+# token that Vosk produces from all kinds of unclear audio — and on this system a false
+# wake can reach the HELP intent, which alerts a caregiver. A missed wake costs a repeat;
+# a false wake costs trust. That trade is not symmetric.
+#
+# Matching is token-based, not substring. The near-homophone control transcribed as
+# "may son as bright today", which CONTAINS the substring "may so" — a naive substring
+# match would false-wake on the very trial designed to catch that.
+WAKE_VARIANTS: tuple[tuple[str, ...], ...] = (
+    ("mesa",),
+    ("may", "so"),
+    ("made", "so"),
+)
+
+_TOKEN = re.compile(r"[a-z']+")
+
+
+def _tokens(text: str) -> list[str]:
+    return _TOKEN.findall(text.lower())
+
+
+def matches_wake_word(text: str, wake_word: str = DEFAULT_WAKE_WORD) -> bool:
+    """True if the transcript contains the wake word or a measured mishearing of it.
+
+    Token-based so that "may son" does not match the ("may", "so") variant.
+    """
+    toks = _tokens(text)
+    variants = tuple(WAKE_VARIANTS)
+    if wake_word != DEFAULT_WAKE_WORD:
+        variants = ((wake_word.lower(),),)
+    for var in variants:
+        n = len(var)
+        for i in range(len(toks) - n + 1):
+            if tuple(toks[i:i + n]) == var:
+                return True
+    return False
+
 
 class Intent(Enum):
     NEXT_MED = "next_med"
@@ -54,9 +97,19 @@ def normalize_med(phrase: str) -> str:
 
 
 def strip_wake_word(text: str, wake_word: str = DEFAULT_WAKE_WORD) -> str:
-    """Remove a leading wake word (and trailing comma) if present."""
+    """Remove a leading wake word — or a measured mishearing of it — and trailing comma."""
     pattern = re.compile(rf"^\s*{re.escape(wake_word)}[,\s]+", re.IGNORECASE)
-    return pattern.sub("", text, count=1)
+    out = pattern.sub("", text, count=1)
+    if out != text:
+        return out
+    for var in WAKE_VARIANTS:
+        if var == (wake_word.lower(),):
+            continue
+        alt = re.compile(rf"^\s*{r'[,\s]+'.join(re.escape(w) for w in var)}[,\s]+", re.IGNORECASE)
+        out = alt.sub("", text, count=1)
+        if out != text:
+            return out
+    return text
 
 
 def parse_intent(text: str) -> ParsedIntent:

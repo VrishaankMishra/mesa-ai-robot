@@ -26,7 +26,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from mesa.audio.intents import DEFAULT_WAKE_WORD, parse_intent, strip_wake_word
+from mesa.audio.intents import DEFAULT_WAKE_WORD, matches_wake_word, parse_intent, strip_wake_word
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_ROOT = REPO_ROOT / "eval_voice"
@@ -282,7 +282,7 @@ def main() -> int:
             save_wav(out_dir / f"trial_{i:02d}.wav", pcm16k, SAMPLE_RATE)
         transcript = transcribe(pcm16k.tobytes(), model)
 
-        wake_detected = DEFAULT_WAKE_WORD in transcript.lower()
+        wake_detected = matches_wake_word(transcript, DEFAULT_WAKE_WORD)
         parsed = (parse_intent(strip_wake_word(transcript, DEFAULT_WAKE_WORD)).intent.value
                   if wake_detected else "")
         ok = (wake_detected == wake_expected) and (
