@@ -87,3 +87,72 @@ def test_negated_help_does_not_trigger_help():
 def test_affirmative_help_still_wins_over_okay_words():
     # Safety first: an actual call for help beats an okay-sounding phrase around it.
     assert parse_intent("i'm fine but please call for help").intent == Intent.HELP
+
+
+# --- wake-word variants (VOX-005) --------------------------------------------------
+# Derived from the 2026-09-05 quiet grid: 45 wake-expected trials, 13 missed. Vosk
+# splits "MAY-suh" into two words more often than it hears it whole.
+
+from mesa.audio.intents import matches_wake_word
+
+MEASURED_MISSES = [
+    "may so what's next",
+    "may so one is my next hell",
+    "made so what day is it today",
+    "may so i'm okay",
+    "made so what is next",
+    "may so one day is it today",
+    "may so what is the date",
+]
+
+MEASURED_CONTROLS = [                    # no-wake trials — must NEVER match
+    "what time is it",
+    "did i take my advil",
+    "may son as bright today",           # the near-homophone control
+    "may stun is bright today",
+    "ne son is bright there",
+    "did i take my and know",
+    "but what what time is it",
+]
+
+
+def test_plain_wake_word_still_matches():
+    assert matches_wake_word("mesa what time is it")
+    assert matches_wake_word("MeSA, call for help")
+
+
+def test_every_measured_two_token_miss_now_wakes():
+    for t in MEASURED_MISSES:
+        assert matches_wake_word(t), t
+
+
+def test_no_control_transcript_wakes():
+    """Including 'may son', which CONTAINS the substring 'may so'."""
+    for t in MEASURED_CONTROLS:
+        assert not matches_wake_word(t), t
+
+
+def test_may_son_is_rejected_because_matching_is_token_based():
+    assert not matches_wake_word("may son as bright today")
+    assert matches_wake_word("may so as bright today")
+
+
+def test_mr_is_deliberately_not_a_variant():
+    """It would recover three more misses, but a false wake can reach the HELP intent."""
+    assert not matches_wake_word("mr help me")
+    assert not matches_wake_word("mister smith needs help")
+
+
+def test_variant_can_appear_mid_utterance():
+    assert matches_wake_word("okay may so what is the date")
+
+
+def test_custom_wake_word_disables_the_measured_variants():
+    assert matches_wake_word("robot help me", wake_word="robot")
+    assert not matches_wake_word("may so help me", wake_word="robot")
+
+
+def test_strip_removes_a_variant_prefix():
+    from mesa.audio.intents import strip_wake_word
+    assert strip_wake_word("may so what is the date") == "what is the date"
+    assert strip_wake_word("mesa what is the date") == "what is the date"

@@ -16,7 +16,7 @@ import argparse
 
 from mesa.alerts.ntfy import send_alert
 from mesa.audio.assistant import VoiceAssistant
-from mesa.audio.intents import DEFAULT_WAKE_WORD, parse_intent, strip_wake_word
+from mesa.audio.intents import DEFAULT_WAKE_WORD, matches_wake_word, parse_intent, strip_wake_word
 from mesa.audio.stt import VoskRecognizer
 from mesa.audio.tts import speak
 from mesa.config import get, load_config
@@ -39,7 +39,7 @@ def main() -> int:
 
     print(f"Listening. Say '{wake}' then a command. Ctrl-C to stop.")
     for transcript in recognizer.listen():
-        if wake not in transcript.lower():
+        if not matches_wake_word(transcript, wake):
             continue
         command = strip_wake_word(transcript, wake)
         parsed = parse_intent(command)
