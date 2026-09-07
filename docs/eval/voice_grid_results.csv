@@ -2,3 +2,4 @@ condition,wake_rate,false_wake_rate,intent_acc_given_wake,exact_rate,n_trials
 d1m_quiet_vrishaank,0.733,0.000,0.818,0.667,18
 d2m_quiet_vrishaank,0.667,0.000,0.800,0.611,18
 d3m_quiet_vrishaank,0.733,0.000,0.909,0.722,18
+station_demo_posture,0.800,0.000,0.667,0.611,18
