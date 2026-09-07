@@ -138,3 +138,30 @@ before the fix. And the manifest header had drifted four columns short of the ro
 provenance fields were written but unlabelled; the writer is now schema-driven.
 
 **Still blocked:** the `tv` volume step (6 cells) and SRC approval (Mom's cells).
+
+
+## Station cell — 2026-09-07 (demo posture, VOX-005)
+
+Run at the medication station, standing where Student D stands in Act 3, ~1.5 m from the
+SP300U — not at the taped distance marks. This is the number Act 3 actually depends on.
+
+| | wake | false-wake | intent given wake | exact |
+|---|---|---|---|---|
+| `station_demo_posture` | **80%** (12/15) | 0/3 | **67%** (8/12) | 61% |
+
+**The wake-word variants worked in live speech.** `may so on is my next bill` woke the robot —
+that utterance would have been silence the day before. `may son as bright today` was still
+correctly rejected, so token-based matching held outside the test suite.
+
+**Read the 71% → 80% gain cautiously.** The pilot measured a 7-point test-retest floor on wake
+rate, and this is a single cell of 15 wake-expected trials. The mechanism is proven; the size of
+the gain is not.
+
+**The bottleneck moved to intent parsing (67%).** All four failures are transcription quality
+rather than parsing logic — `mesa one of the next`, `oh it may so what`, `mesa our days it
+today` — and every one returns UNKNOWN, which triggers *"Sorry, I didn't catch that. Please say
+it again."* That is the graceful failure mode, and it is what Act 3 is scripted around.
+
+**Per-command reliability**, from this cell: `call for help`, `help me`, `I'm okay`, `I don't
+need help` all landed. `next medication` and `what day is it` both failed twice. Act 3 now leads
+with a reliable command before attempting the next-medication question.
