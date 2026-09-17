@@ -46,6 +46,22 @@ voice:
   stt_engine: vosk              # swappable: "vosk" | "whisper-tiny"
   vosk_model_path: models/vosk-model-small-en-us
 
+  # Restrict Vosk to the words MeSA actually needs (VOX-007). The open vocabulary is
+  # ~100k words; a noisy room lets the decoder pick any of them, which at the 2026-09-13
+  # library demo produced unparseable commands AND profanity that was never spoken.
+  # The grammar is ~50 phrases, so out-of-vocabulary words become undecodable rather
+  # than filtered. Set false to fall back to open-vocabulary decoding.
+  constrain_vocabulary: true
+
+  # Push-to-talk (VOX-006). A button press replaces the wake word, which is the least
+  # reliable link in the chain in noise — every measured voice cell is a QUIET cell
+  # (docs/eval/voice_grid_results.csv) and wake rate there was only 0.67-0.80.
+  push_to_talk:
+    enabled: true
+    source: auto                # auto | gpio | keyboard | event | none  (auto: GPIO button, else Enter key)
+    gpio_pin: 17                # BCM pin for the momentary button, when source resolves to gpio
+    window_seconds: 6.0         # how long after a press speech is accepted
+
 alerts:
   ntfy_topic: mesa-alerts-CHANGEME   # private topic (random suffix); subscribe in the ntfy app
   twilio_enabled: false

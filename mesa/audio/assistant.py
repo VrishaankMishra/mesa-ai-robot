@@ -56,7 +56,15 @@ class VoiceAssistant:
             if not parsed.med:
                 return "Which medication do you mean?"
             if parsed.med not in self._known_meds():
-                return f"I don't have a medication called {pretty_med(parsed.med)}."
+                # Deliberately does NOT repeat the captured phrase back. `parsed.med` is
+                # raw transcript — whatever Vosk emitted after "take/taken/had" — and this
+                # was the one path in the assistant where unvalidated user-transcribed text
+                # reached TTS. At the 2026-09-13 library demo a noisy room made Vosk
+                # hallucinate profanity that was never spoken, and MeSA read it aloud to
+                # the audience. Echoing a *recognized* name is friendlier, but a device
+                # that speaks in public must never repeat a word it only thinks it heard.
+                return ("I don't have that medication on your list. "
+                        "You can check the dashboard for the full list.")
             taken = self.db.meds_taken_today(now=now)
             if parsed.med in taken:
                 return f"Yes, you've taken {pretty_med(parsed.med)} today."

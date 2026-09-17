@@ -19,10 +19,20 @@ class SpeechRecognizer(Protocol):
 class VoskRecognizer:
     """Offline STT using Vosk. Needs a microphone + a downloaded Vosk model."""
 
-    def __init__(self, model_path: str, samplerate: int = 16000, device: int | None = None):
+    def __init__(
+        self,
+        model_path: str,
+        samplerate: int = 16000,
+        device: int | None = None,
+        grammar: str | None = None,
+    ):
         self.model_path = model_path
         self.samplerate = samplerate
         self.device = device
+        # Optional JSON phrase list (see mesa.audio.vocabulary). When set, Vosk decodes
+        # against these words only — which is what keeps a noisy room from producing
+        # words nobody said. None = the model's full open vocabulary.
+        self.grammar = grammar
 
     def listen(self) -> Iterator[str]:  # pragma: no cover - requires mic hardware
         import json
@@ -32,7 +42,11 @@ class VoskRecognizer:
         from vosk import KaldiRecognizer, Model
 
         model = Model(self.model_path)
-        rec = KaldiRecognizer(model, self.samplerate)
+        rec = (
+            KaldiRecognizer(model, self.samplerate, self.grammar)
+            if self.grammar
+            else KaldiRecognizer(model, self.samplerate)
+        )
         q: queue.Queue = queue.Queue()
 
         def _callback(indata, frames, t, status):

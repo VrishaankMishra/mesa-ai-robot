@@ -165,3 +165,46 @@ it again."* That is the graceful failure mode, and it is what Act 3 is scripted 
 **Per-command reliability**, from this cell: `call for help`, `help me`, `I'm okay`, `I don't
 need help` all landed. `next medication` and `what day is it` both failed twice. Act 3 now leads
 with a reliable command before attempting the next-medication question.
+
+## Field failure — library science center, 2026-09-13 (no data captured)
+
+The first time the voice stack met a genuinely loud room, and it did not go well. **No
+audio was recorded** — the demo ran through `main.py`, not `eval_voice_capture.py`, so
+there are no `trial_NN.wav` files and no transcripts. What follows is from observation
+only and is *not* evidence; it is the reason for the changes below, not a measurement.
+
+Observed:
+
+1. **The wake word failed repeatedly.** Expected: every voice cell in
+   `docs/eval/voice_grid_results.csv` is a `quiet` cell, and wake rate there is only
+   0.67–0.80. The `tv` (noise) half of the grid has still never been run — it is blocked
+   on choosing the noise source and volume step, which is still unfilled above. The demo
+   was effectively the first noise trial, run in public with no instrumentation.
+2. **Commands that *did* wake returned "Sorry, I didn't catch that."** That is the
+   `UNKNOWN` fallback, so the wake word matched and `parse_intent` then failed — the
+   transcript after the wake word was too degraded to classify.
+3. **Vosk emitted profanity that was never spoken, and MeSA said it out loud.** The
+   decoder was running the model's full ~100k-word open vocabulary; in bad audio, short
+   common words fit garbled input well. It reached the speaker through
+   `VoiceAssistant.respond`, which echoed the raw captured medication phrase back
+   (`"I don't have a medication called {...}"`). That branch had no test coverage.
+
+Changes made in response (VOX-006 / VOX-007):
+
+- **Push-to-talk** (`mesa/audio/ptt.py`): a button press opens a talk window and *is* the
+  wake signal. The audio stream is gated, not stopped — Vosk keeps transcribing, but
+  anything outside an open window never reaches the intent parser. Crowd speech can
+  therefore neither trigger a command nor bury one.
+- **Constrained vocabulary** (`mesa/audio/vocabulary.py`): Vosk decodes against ~50
+  phrases instead of ~100k words. Out-of-vocabulary words become undecodable rather than
+  filtered after the fact. Verify with `scripts/check_vocabulary.py` before any demo —
+  Vosk silently drops grammar words missing from its lexicon, which would make a
+  medication name permanently unrecognizable.
+- **No transcript is ever spoken back.** The assistant no longer repeats a captured
+  medication phrase it does not recognize. A device that talks in public must not repeat
+  a word it only thinks it heard.
+
+**Still owed:** none of this is *measured*. The `tv` cells remain the real outstanding
+work — pick the noise source and volume, write it above, and run the grid. Until then the
+noise numbers are unknown, and push-to-talk is a way of not depending on them rather than
+an answer to them.

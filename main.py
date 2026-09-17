@@ -147,10 +147,40 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
         assistant = VoiceAssistant(
             db, alert_fn=lambda msg: send_alert(topic, msg, title="MeSA help")
         )
+
+        # Constrain the recognizer to MeSA's own vocabulary (VOX-007), built from the
+        # command phrases plus this station's medication names.
+        grammar = None
+        if get(cfg, "voice.constrain_vocabulary", True):
+            from mesa.audio.vocabulary import build_grammar, build_phrases
+
+            voice_meds = {m["name"] for m in db.list_medications(active_only=False)}
+            voice_meds |= {s["med_name"] for s in db.get_schedule()}
+            grammar = build_grammar(voice_meds)
+            print(f"[live] voice vocabulary constrained to "
+                  f"{len(build_phrases(voice_meds))} phrases "
+                  f"(open vocabulary off — see scripts/check_vocabulary.py)")
+
+        # Push-to-talk (VOX-006): a button press replaces the wake word.
+        trigger = None
+        if get(cfg, "voice.push_to_talk.enabled", False):
+            from mesa.audio.ptt import get_trigger
+
+            trigger = get_trigger(
+                source=get(cfg, "voice.push_to_talk.source", "auto"),
+                pin=get(cfg, "voice.push_to_talk.gpio_pin", 17),
+            )
+            if getattr(trigger, "name", "none") == "keyboard":
+                print("[live] push-to-talk: press ENTER, then speak your command.")
+            else:
+                print(f"[live] push-to-talk: {getattr(trigger, 'name', 'none')} trigger.")
+
         workers.append(AudioWorker(
-            bus, assistant, VoskRecognizer(str(vosk_path)),
+            bus, assistant, VoskRecognizer(str(vosk_path), grammar=grammar),
             wake_word=get(cfg, "voice.wake_word", "mesa"),
             speak=lambda msg: tts_speak(msg, echo=echo),
+            trigger=trigger,
+            window_seconds=get(cfg, "voice.push_to_talk.window_seconds", 6.0),
         ))
     else:
         print(f"[live] no Vosk model at {vosk_path} — voice off (see models/README.md).")

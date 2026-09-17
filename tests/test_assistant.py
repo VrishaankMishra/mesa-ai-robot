@@ -100,3 +100,26 @@ def test_ntfy_build_request():
 def test_ntfy_requires_topic():
     with pytest.raises(ValueError):
         build_request("", "msg")
+
+
+def test_unknown_medication_is_never_echoed_back(tmp_path):
+    """Regression guard for the 2026-09-13 library demo (VOX-007).
+
+    `parsed.med` is raw transcript. In a noisy room Vosk hallucinated words nobody said,
+    and this branch read them aloud. The response must describe the situation without
+    repeating what MeSA thinks it heard — no test covered this branch before, which is
+    exactly how it reached a live audience.
+    """
+    from mesa.audio.intents import Intent, ParsedIntent
+
+    db = Database(":memory:")
+    db.add_medication("tylenol")
+    assistant = VoiceAssistant(db)
+
+    for hallucinated in ("goddamn", "some_garbage_word", "advil"):
+        reply = assistant.respond(
+            ParsedIntent(Intent.DID_I_TAKE, med=hallucinated), now=1_700_000_000.0
+        )
+        assert hallucinated not in reply.lower()
+        assert hallucinated.replace("_", " ") not in reply.lower()
+        assert "don't have that medication" in reply
