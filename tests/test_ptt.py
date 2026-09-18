@@ -246,3 +246,48 @@ def test_ordinary_command_window_is_not_sticky():
     assert worker.handle_transcript("[unk]", now=10.5) is True
     assert worker.handle_transcript("i'm okay", now=11.0) is False    # window closed
     assert drain(bus) == []
+
+
+# --- spoken aliases (VOX-007): what is said vs what the detector emits --------------
+
+def test_alias_replaces_raw_name_in_grammar():
+    from mesa.audio.vocabulary import spoken_form
+    aliases = {"vitamin_d3": "vitamin d", "cvs_allergy": "allergy pill"}
+    phrases = build_phrases({"vitamin_d3", "cvs_allergy", "advil"}, aliases)
+    assert "vitamin d" in phrases and "vitamin d3" not in phrases   # "d3" is not speech
+    assert "allergy pill" in phrases and "cvs allergy" not in phrases
+    assert "advil" in phrases                                       # no alias -> raw name
+    assert spoken_form("advil", aliases) == "advil"
+
+
+def test_alias_resolves_to_canonical_db_name():
+    """User says 'vitamin d'; the DB and detector know only 'vitamin_d3'."""
+    from mesa.audio.intents import parse_intent
+    db = Database(":memory:")
+    db.add_medication("vitamin_d3")
+    a = VoiceAssistant(db, med_aliases={"vitamin_d3": "vitamin d"})
+    parsed = parse_intent("did i take my vitamin d today")
+    assert parsed.med == "vitamin_d"                                # what parse_intent yields
+    reply = a.respond(parsed, now=1_700_000_000.0)
+    assert "Vitamin D3" in reply                                    # resolved to the canonical name
+    assert "don't have" not in reply
+
+
+def test_canonical_name_still_resolves_alongside_alias():
+    from mesa.audio.intents import Intent, ParsedIntent
+    db = Database(":memory:")
+    db.add_medication("vitamin_d3")
+    a = VoiceAssistant(db, med_aliases={"vitamin_d3": "vitamin d"})
+    reply = a.respond(ParsedIntent(Intent.DID_I_TAKE, med="vitamin_d3"), now=1_700_000_000.0)
+    assert "Vitamin D3" in reply
+
+
+def test_alias_for_unknown_canonical_does_not_invent_a_medication():
+    """An alias pointing at a med not in the DB must not make it 'known'."""
+    from mesa.audio.intents import Intent, ParsedIntent
+    db = Database(":memory:")
+    db.add_medication("advil")
+    a = VoiceAssistant(db, med_aliases={"omeprazole": "stomach pill"})   # omeprazole not in DB
+    reply = a.respond(ParsedIntent(Intent.DID_I_TAKE, med="stomach_pill"), now=1_700_000_000.0)
+    assert "don't have that medication" in reply
+    assert "stomach" not in reply.lower()                           # still never echoed

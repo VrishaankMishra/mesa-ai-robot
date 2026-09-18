@@ -84,15 +84,33 @@ def _wake_phrases() -> list[str]:
     return [" ".join(var) for var in WAKE_VARIANTS]
 
 
-def build_phrases(med_names: set[str] | None = None) -> list[str]:
+def spoken_form(name: str, aliases: dict[str, str] | None = None) -> str:
+    """What the user *says* for a medication.
+
+    The DB/detector name and the spoken name are deliberately decoupled. The detector's
+    class label must equal the DB ``med_name`` byte-for-byte (``presence_map`` matches by
+    string equality), so a name like ``vitamin_d3`` cannot be changed without breaking
+    MED/LOG for that bottle. But ``d3`` is not a token any ASR lexicon contains — people
+    say "d three" or just "vitamin d" — so as *speech* it is undecodable. An alias lets
+    the spoken form be "vitamin d" while the detector keeps emitting ``vitamin_d3``.
+    """
+    if aliases and name in aliases and aliases[name].strip():
+        return aliases[name].strip().lower()
+    # DB names are snake_case ('vitamin_d3'); spoken form is space-separated.
+    return name.replace("_", " ").strip().lower()
+
+
+def build_phrases(
+    med_names: set[str] | None = None,
+    aliases: dict[str, str] | None = None,
+) -> list[str]:
     """Every phrase the recognizer is allowed to produce, lowercased and de-duplicated."""
     phrases: list[str] = []
     phrases.extend(_wake_phrases())
     phrases.extend(COMMAND_PHRASES)
     phrases.extend(FILLER_WORDS)
     for name in sorted(med_names or set()):
-        # DB names are snake_case ('vitamin_d3'); spoken form is space-separated.
-        spoken = name.replace("_", " ").strip().lower()
+        spoken = spoken_form(name, aliases)
         if spoken:
             phrases.append(spoken)
     seen: set[str] = set()
@@ -106,6 +124,9 @@ def build_phrases(med_names: set[str] | None = None) -> list[str]:
     return out
 
 
-def build_grammar(med_names: set[str] | None = None) -> str:
+def build_grammar(
+    med_names: set[str] | None = None,
+    aliases: dict[str, str] | None = None,
+) -> str:
     """The phrase list as the JSON string ``KaldiRecognizer`` expects."""
-    return json.dumps(build_phrases(med_names))
+    return json.dumps(build_phrases(med_names, aliases))

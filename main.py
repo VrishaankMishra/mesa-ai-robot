@@ -144,21 +144,23 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
         from mesa.audio.tts import speak as tts_speak
 
         topic = get(cfg, "alerts.ntfy_topic", "")
+        med_aliases = get(cfg, "voice.med_aliases", {}) or {}
         assistant = VoiceAssistant(
-            db, alert_fn=lambda msg: send_alert(topic, msg, title="MeSA help")
+            db, alert_fn=lambda msg: send_alert(topic, msg, title="MeSA help"),
+            med_aliases=med_aliases,
         )
 
         # Constrain the recognizer to MeSA's own vocabulary (VOX-007), built from the
-        # command phrases plus this station's medication names.
+        # command phrases plus this station's medication names (spoken aliases applied).
         grammar = None
         if get(cfg, "voice.constrain_vocabulary", True):
             from mesa.audio.vocabulary import build_grammar, build_phrases
 
             voice_meds = {m["name"] for m in db.list_medications(active_only=False)}
             voice_meds |= {s["med_name"] for s in db.get_schedule()}
-            grammar = build_grammar(voice_meds)
+            grammar = build_grammar(voice_meds, med_aliases)
             print(f"[live] voice vocabulary constrained to "
-                  f"{len(build_phrases(voice_meds))} phrases "
+                  f"{len(build_phrases(voice_meds, med_aliases))} phrases "
                   f"(open vocabulary off — see scripts/check_vocabulary.py)")
 
         # Push-to-talk (VOX-006): a button press replaces the wake word.

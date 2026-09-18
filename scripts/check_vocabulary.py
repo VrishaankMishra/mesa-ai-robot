@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mesa.audio.vocabulary import UNK, build_phrases  # noqa: E402
+from mesa.audio.vocabulary import UNK, build_phrases, spoken_form  # noqa: E402
 from mesa.config import get, load_config  # noqa: E402
 from mesa.data.database import Database  # noqa: E402
 
@@ -63,8 +63,13 @@ def main() -> int:
     else:
         print(f"[warn] no database at {args.db} — checking command phrases only.")
 
-    phrases = build_phrases(med_names)
-    print(f"grammar: {len(phrases)} phrases\n")
+    aliases = get(cfg, "voice.med_aliases", {}) or {}
+    phrases = build_phrases(med_names, aliases)
+    print(f"grammar: {len(phrases)} phrases")
+    aliased = {n: spoken_form(n, aliases) for n in med_names if n in aliases}
+    if aliased:
+        print("spoken aliases in use: " + ", ".join(f"{k} -> '{v}'" for k, v in sorted(aliased.items())))
+    print()
 
     if not model_path.exists():
         print(f"[warn] no Vosk model at {model_path} — cannot verify against a lexicon.")
@@ -96,7 +101,7 @@ def main() -> int:
     # never issue, and is fixed in the database. A missing word in a built-in command phrase
     # is a different problem with a different fix — telling someone to "rename the
     # medication" because "what time is it" lost the word "it" sends them the wrong way.
-    spoken_meds = {n.replace("_", " ").strip().lower() for n in med_names}
+    spoken_meds = {spoken_form(n, aliases) for n in med_names}
     bad_meds = [(p, m) for p, m in bad if p in spoken_meds]
     bad_cmds = [(p, m) for p, m in bad if p not in spoken_meds]
 
@@ -105,9 +110,10 @@ def main() -> int:
         print("  MEDICATION NAMES (these commands can never be recognized):")
         for phrase, missing in bad_meds:
             print(f"    {phrase!r}  ->  missing: {', '.join(missing)}")
-        print("\n  Fix: rename to a pronounceable in-vocabulary form in the schedule/")
-        print("  medications table (e.g. 'omeprazole' -> 'stomach pill'). Say the new name")
-        print("  aloud in the demo script too — the label the user speaks must match.\n")
+        print("\n  Fix: add a spoken alias under voice.med_aliases in config.yaml, e.g.")
+        print("    omeprazole: stomach pill")
+        print("  Do NOT rename the medication in the database — the detector's class label")
+        print("  must match the DB name exactly, or that bottle stops being tracked.\n")
     if bad_cmds:
         print("  COMMAND PHRASES (built-in wording this model cannot decode):")
         for phrase, missing in bad_cmds:

@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Callable
 
-from mesa.audio.intents import Intent, ParsedIntent
+from mesa.audio.intents import Intent, ParsedIntent, normalize_med
 from mesa.data.database import Database
 
 
@@ -27,14 +27,37 @@ def next_scheduled(schedule: list[dict], current_hhmm: str) -> dict | None:
 
 
 class VoiceAssistant:
-    def __init__(self, db: Database, alert_fn: Callable[[str], None] | None = None):
+    def __init__(
+        self,
+        db: Database,
+        alert_fn: Callable[[str], None] | None = None,
+        med_aliases: dict[str, str] | None = None,
+    ):
         self.db = db
         self.alert_fn = alert_fn
+        # canonical DB name -> spoken form, e.g. {"vitamin_d3": "vitamin d"}. Inverted here
+        # to snake_case spoken -> canonical, because that is the shape parse_intent hands us.
+        # See mesa.audio.vocabulary.spoken_form for why the two names must differ.
+        self._alias_to_canonical: dict[str, str] = {
+            normalize_med(spoken): canonical
+            for canonical, spoken in (med_aliases or {}).items()
+            if spoken and spoken.strip()
+        }
 
     def _known_meds(self) -> set[str]:
         names = {m["name"] for m in self.db.list_medications(active_only=False)}
         names |= {s["med_name"] for s in self.db.get_schedule()}
         return names
+
+    def _resolve_med(self, spoken: str) -> str | None:
+        """Map what was said to a canonical DB name, via an exact match or a spoken alias."""
+        known = self._known_meds()
+        if spoken in known:
+            return spoken
+        canonical = self._alias_to_canonical.get(spoken)
+        if canonical is not None and canonical in known:
+            return canonical
+        return None
 
     def respond(self, parsed: ParsedIntent, now: float | None = None) -> str:
         now = now if now is not None else datetime.now().timestamp()
@@ -55,7 +78,8 @@ class VoiceAssistant:
         if parsed.intent == Intent.DID_I_TAKE:
             if not parsed.med:
                 return "Which medication do you mean?"
-            if parsed.med not in self._known_meds():
+            med = self._resolve_med(parsed.med)
+            if med is None:
                 # Deliberately does NOT repeat the captured phrase back. `parsed.med` is
                 # raw transcript — whatever Vosk emitted after "take/taken/had" — and this
                 # was the one path in the assistant where unvalidated user-transcribed text
@@ -66,9 +90,9 @@ class VoiceAssistant:
                 return ("I don't have that medication on your list. "
                         "You can check the dashboard for the full list.")
             taken = self.db.meds_taken_today(now=now)
-            if parsed.med in taken:
-                return f"Yes, you've taken {pretty_med(parsed.med)} today."
-            return f"No, you haven't taken {pretty_med(parsed.med)} yet today."
+            if med in taken:
+                return f"Yes, you've taken {pretty_med(med)} today."
+            return f"No, you haven't taken {pretty_med(med)} yet today."
 
         if parsed.intent == Intent.NEXT_MED:
             schedule = [dict(s) for s in self.db.get_schedule()]
