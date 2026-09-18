@@ -34,8 +34,7 @@
 ## Confusion matrix
 ![confusion matrix](confusion_matrix_normalized.png)
 
-Raw-count matrix: `confusion_matrix.png` · PR curve: `PR_curve.png` · sample
-predictions vs labels: `val_batch0_pred.jpg`.
+Raw-count matrix: `confusion_matrix.png` · PR curve: `PR_curve.png`.
 
 ## Observations / failure cases (candidate VIS-007 items)
 - **omeprazole** (small purple-cap bottle) is the weakest class (0.746) — small object,
