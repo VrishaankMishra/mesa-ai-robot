@@ -175,13 +175,29 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
             else:
                 print(f"[live] push-to-talk: {getattr(trigger, 'name', 'none')} trigger.")
 
-        workers.append(AudioWorker(
+        audio_worker = AudioWorker(
             bus, assistant, VoskRecognizer(str(vosk_path), grammar=grammar),
             wake_word=get(cfg, "voice.wake_word", "mesa"),
             speak=lambda msg: tts_speak(msg, echo=echo),
             trigger=trigger,
             window_seconds=get(cfg, "voice.push_to_talk.window_seconds", 6.0),
-        ))
+            check_in_window_seconds=get(cfg, "voice.push_to_talk.check_in_window_seconds", 30.0),
+        )
+        workers.append(audio_worker)
+
+        # A spoken check-in opens its own talk window (VOX-006). Without this, push-to-talk
+        # makes "Are you okay?" unanswerable: the reply lands with no window open, is
+        # discarded, and L1 escalates to L2/L3 on someone who did answer. A person who has
+        # fallen cannot reach the button, so MeSA listens whenever MeSA is the one asking.
+        if trigger is not None:
+            _prev_check_in = engine.escalation.on_check_in
+
+            def _check_in_and_listen(reason, _prev=_prev_check_in, _w=audio_worker):
+                if _prev is not None:
+                    _prev(reason)
+                _w.open_check_in()
+
+            engine.escalation.on_check_in = _check_in_and_listen
     else:
         print(f"[live] no Vosk model at {vosk_path} — voice off (see models/README.md).")
 

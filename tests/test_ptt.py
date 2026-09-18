@@ -190,3 +190,59 @@ def test_grammar_is_valid_json_and_small():
 def test_grammar_has_no_duplicates():
     phrases = build_phrases({"tylenol", "tylenol"})
     assert len(phrases) == len(set(phrases))
+
+
+# --- escalation check-in must stay answerable under push-to-talk (VOX-006) -----------
+
+def test_check_in_window_opens_without_a_button_press():
+    """MeSA asked "Are you okay?", so MeSA listens — a fallen person cannot press it."""
+    spoken = []
+    worker, bus = make_worker(spoken, trigger=EventTrigger())
+    worker.open_check_in(now=100.0)
+    assert worker.handle_transcript("i'm okay", now=101.0) is True
+    assert [e.type for e in drain(bus)] == [ACKNOWLEDGE]
+
+
+def test_check_in_window_is_longer_than_a_command_window():
+    spoken = []
+    worker, bus = make_worker(spoken, trigger=EventTrigger(), window_seconds=6.0)
+    worker.check_in_window_seconds = 30.0
+    worker.open_check_in(now=100.0)
+    # Still listening well past the 6s command window — answering a fall takes longer.
+    assert worker.handle_transcript("i'm okay", now=125.0) is True
+    assert [e.type for e in drain(bus)] == [ACKNOWLEDGE]
+
+
+def test_garbled_reply_does_not_end_a_check_in():
+    """One unclassifiable answer must not escalate someone who actually responded."""
+    spoken = []
+    worker, bus = make_worker(spoken, trigger=EventTrigger())
+    worker.check_in_window_seconds = 30.0
+    worker.open_check_in(now=100.0)
+
+    assert worker.handle_transcript("[unk]", now=102.0) is True     # garbled
+    assert drain(bus) == []                                          # no ack yet
+    assert worker.handle_transcript("mumble mumble", now=104.0) is True
+    assert drain(bus) == []
+    # The window survived both, so the eventual real answer still lands.
+    assert worker.handle_transcript("i'm okay", now=106.0) is True
+    assert [e.type for e in drain(bus)] == [ACKNOWLEDGE]
+
+
+def test_check_in_window_does_eventually_expire():
+    spoken = []
+    worker, bus = make_worker(spoken, trigger=EventTrigger())
+    worker.check_in_window_seconds = 30.0
+    worker.open_check_in(now=100.0)
+    assert worker.handle_transcript("i'm okay", now=131.0) is False   # past the window
+    assert drain(bus) == []
+
+
+def test_ordinary_command_window_is_not_sticky():
+    """A button press gets one shot; only check-ins retry."""
+    spoken = []
+    worker, bus = make_worker(spoken, trigger=EventTrigger())
+    worker.open_window(now=10.0)
+    assert worker.handle_transcript("[unk]", now=10.5) is True
+    assert worker.handle_transcript("i'm okay", now=11.0) is False    # window closed
+    assert drain(bus) == []

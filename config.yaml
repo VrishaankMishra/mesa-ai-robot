@@ -61,6 +61,10 @@ voice:
     source: auto                # auto | gpio | keyboard | event | none  (auto: GPIO button, else Enter key)
     gpio_pin: 17                # BCM pin for the momentary button, when source resolves to gpio
     window_seconds: 6.0         # how long after a press speech is accepted
+    # A spoken escalation check-in ("Are you okay?") opens its own window with no button
+    # press — a fallen person cannot reach the button — and keeps it open across replies
+    # MeSA cannot classify, so one garbled answer does not escalate someone who answered.
+    check_in_window_seconds: 30.0
 
 alerts:
   ntfy_topic: mesa-alerts-CHANGEME   # private topic (random suffix); subscribe in the ntfy app

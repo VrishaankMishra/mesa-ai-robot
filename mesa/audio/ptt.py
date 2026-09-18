@@ -180,8 +180,13 @@ class TalkWindow:
         self.window_seconds = window_seconds
         self._open_until: float | None = None
 
-    def open(self, now: float) -> None:
-        self._open_until = now + self.window_seconds
+    def open(self, now: float, seconds: float | None = None) -> None:
+        """Open for ``seconds`` (default :attr:`window_seconds`)."""
+        self._open_until = now + (self.window_seconds if seconds is None else seconds)
+
+    def extend_to(self, until: float) -> None:
+        """Hold the window open until an absolute time. Used to retry a check-in answer."""
+        self._open_until = until
 
     def is_open(self, now: float) -> bool:
         return self._open_until is not None and now < self._open_until
