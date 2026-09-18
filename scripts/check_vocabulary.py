@@ -27,9 +27,11 @@ from mesa.data.database import Database  # noqa: E402
 
 def load_lexicon(model_path: Path) -> set[str] | None:
     """Words the model knows, read from its graph vocabulary file if one is present."""
-    for rel in ("graph/words.txt", "graph/phones/word_boundary.int", "am/words.txt"):
+    # Vosk ships the decoding vocabulary as graph/words.txt; older//repacked layouts
+    # sometimes put it under am/. Anything else is not a word list.
+    for rel in ("graph/words.txt", "am/words.txt"):
         f = model_path / rel
-        if f.name != "words.txt" or not f.exists():
+        if not f.exists():
             continue
         words = set()
         for line in f.read_text(errors="ignore").splitlines():
@@ -90,11 +92,28 @@ def main() -> int:
         print(f"OK — all {len(phrases) - 1} phrases are decodable.")
         return 0
 
+    # Split the report: a medication name that cannot be decoded is a command the user can
+    # never issue, and is fixed in the database. A missing word in a built-in command phrase
+    # is a different problem with a different fix — telling someone to "rename the
+    # medication" because "what time is it" lost the word "it" sends them the wrong way.
+    spoken_meds = {n.replace("_", " ").strip().lower() for n in med_names}
+    bad_meds = [(p, m) for p, m in bad if p in spoken_meds]
+    bad_cmds = [(p, m) for p, m in bad if p not in spoken_meds]
+
     print(f"UNDECODABLE — {len(bad)} phrase(s) contain words the model does not know:\n")
-    for phrase, missing in bad:
-        print(f"  {phrase!r}  ->  missing: {', '.join(missing)}")
-    print("\nFix by renaming the medication to a pronounceable in-vocabulary form")
-    print("(e.g. 'omeprazole' -> 'stomach pill') in the schedule/medications table.")
+    if bad_meds:
+        print("  MEDICATION NAMES (these commands can never be recognized):")
+        for phrase, missing in bad_meds:
+            print(f"    {phrase!r}  ->  missing: {', '.join(missing)}")
+        print("\n  Fix: rename to a pronounceable in-vocabulary form in the schedule/")
+        print("  medications table (e.g. 'omeprazole' -> 'stomach pill'). Say the new name")
+        print("  aloud in the demo script too — the label the user speaks must match.\n")
+    if bad_cmds:
+        print("  COMMAND PHRASES (built-in wording this model cannot decode):")
+        for phrase, missing in bad_cmds:
+            print(f"    {phrase!r}  ->  missing: {', '.join(missing)}")
+        print("\n  Fix: reword or drop the phrase in mesa/audio/vocabulary.py. Other")
+        print("  phrasings of the same intent still cover it.")
     return 1
 
 
