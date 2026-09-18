@@ -37,4 +37,18 @@ unzip vosk-model-small-en-us-0.15.zip
 mv vosk-model-small-en-us-0.15 vosk-model-small-en-us
 ```
 Paths are configurable in `config.yaml` (`detection.model_path`, `voice.vosk_model_path`).
-If STT accuracy is poor, swap to whisper-tiny behind the same `SpeechRecognizer` interface.
+
+## Getting the Whisper model (open-vocabulary STT, VOX-008)
+
+Vosk-small cannot emit a word outside its compiled lexicon, so medication names like
+`omeprazole` are unrepresentable to it. `voice.stt_engine: whisper-tiny` switches to
+faster-whisper, which has no such limit. **The model downloads on first use — do this at
+home, on a network, before any demo.** The demo room may have no internet, and a first
+press that hangs on a download is a failed demo.
+
+```bash
+.venv/bin/python -c "from faster_whisper import WhisperModel; WhisperModel('tiny', device='cpu', compute_type='int8'); print('cached')"
+```
+
+That caches `Systran/faster-whisper-tiny` under `~/.cache/huggingface/`. To pin a copy
+inside the repo instead, point `voice.whisper.model_path` at a directory containing it.

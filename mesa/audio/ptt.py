@@ -195,6 +195,10 @@ class TalkWindow:
         """True if a window has been opened and not yet closed (open or just expired)."""
         return self._open_until is not None
 
+    def deadline(self) -> float | None:
+        """Absolute time the current window runs out, or None if none is armed."""
+        return self._open_until
+
     def close(self) -> None:
         self._open_until = None
 

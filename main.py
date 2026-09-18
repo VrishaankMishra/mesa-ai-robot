@@ -135,13 +135,18 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
         print(f"[live] camera {camera_index} unavailable — vision off "
               "(check the connection and camera permissions).")
 
+    # STT engine selection (VOX-001 / VOX-008). "vosk" needs a downloaded model directory;
+    # "whisper-tiny" (or whisper-base) is open-vocabulary and needs no grammar — see
+    # mesa/audio/stt.py for why that matters for medication names.
+    stt_engine = str(get(cfg, "voice.stt_engine", "vosk")).lower()
+    use_whisper = stt_engine.startswith("whisper")
     vosk_path = Path(get(cfg, "voice.vosk_model_path", "models/vosk-model-small-en-us"))
-    if vosk_path.exists():
+    if use_whisper or vosk_path.exists():
         from mesa.audio.assistant import VoiceAssistant
-        from mesa.audio.stt import VoskRecognizer
         from mesa.audio.worker import AudioWorker
         from mesa.alerts.ntfy import send_alert
         from mesa.audio.tts import speak as tts_speak
+        from mesa.audio.vocabulary import spoken_form
 
         topic = get(cfg, "alerts.ntfy_topic", "")
         med_aliases = get(cfg, "voice.med_aliases", {}) or {}
@@ -149,19 +154,40 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
             db, alert_fn=lambda msg: send_alert(topic, msg, title="MeSA help"),
             med_aliases=med_aliases,
         )
+        voice_meds = {m["name"] for m in db.list_medications(active_only=False)}
+        voice_meds |= {s["med_name"] for s in db.get_schedule()}
 
-        # Constrain the recognizer to MeSA's own vocabulary (VOX-007), built from the
-        # command phrases plus this station's medication names (spoken aliases applied).
-        grammar = None
-        if get(cfg, "voice.constrain_vocabulary", True):
-            from mesa.audio.vocabulary import build_grammar, build_phrases
+        if use_whisper:
+            from mesa.audio.stt import WhisperRecognizer
 
-            voice_meds = {m["name"] for m in db.list_medications(active_only=False)}
-            voice_meds |= {s["med_name"] for s in db.get_schedule()}
-            grammar = build_grammar(voice_meds, med_aliases)
-            print(f"[live] voice vocabulary constrained to "
-                  f"{len(build_phrases(voice_meds, med_aliases))} phrases "
-                  f"(open vocabulary off — see scripts/check_vocabulary.py)")
+            size = stt_engine.split("-", 1)[1] if "-" in stt_engine else \
+                get(cfg, "voice.whisper.model_size", "tiny")
+            recognizer = WhisperRecognizer(
+                model_size=size,
+                model_path=get(cfg, "voice.whisper.model_path", None) or None,
+                compute_type=get(cfg, "voice.whisper.compute_type", "int8"),
+                silence_seconds=get(cfg, "voice.whisper.silence_seconds", 1.2),
+                energy_threshold=get(cfg, "voice.whisper.energy_threshold", 600.0),
+                # The station's medication names, in their spoken forms, bias decoding.
+                hint_words=[spoken_form(n, med_aliases) for n in sorted(voice_meds)],
+            )
+            print(f"[live] STT: faster-whisper '{size}' (open vocabulary; every medication "
+                  f"name is transcribable). First use downloads the model — do that at "
+                  f"home, not in the demo room (see models/README.md).")
+        else:
+            from mesa.audio.stt import VoskRecognizer
+
+            # Constrain Vosk to MeSA's own vocabulary (VOX-007), built from the command
+            # phrases plus this station's medication names (spoken aliases applied).
+            grammar = None
+            if get(cfg, "voice.constrain_vocabulary", True):
+                from mesa.audio.vocabulary import build_grammar, build_phrases
+
+                grammar = build_grammar(voice_meds, med_aliases)
+                print(f"[live] voice vocabulary constrained to "
+                      f"{len(build_phrases(voice_meds, med_aliases))} phrases "
+                      f"(open vocabulary off — see scripts/check_vocabulary.py)")
+            recognizer = VoskRecognizer(str(vosk_path), grammar=grammar)
 
         # Push-to-talk (VOX-006): a button press replaces the wake word.
         trigger = None
@@ -178,7 +204,7 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
                 print(f"[live] push-to-talk: {getattr(trigger, 'name', 'none')} trigger.")
 
         audio_worker = AudioWorker(
-            bus, assistant, VoskRecognizer(str(vosk_path), grammar=grammar),
+            bus, assistant, recognizer,
             wake_word=get(cfg, "voice.wake_word", "mesa"),
             speak=lambda msg: tts_speak(msg, echo=echo),
             trigger=trigger,

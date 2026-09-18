@@ -72,6 +72,12 @@ class AudioWorker(threading.Thread):
         self._sticky_until: float | None = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
+        # Clip mode (VOX-008): push-to-talk with a ClipRecognizer (Whisper). Instead of
+        # gating an always-on stream, opening a window *starts a recording*. One capture at
+        # a time; a press during a capture is ignored rather than queued.
+        self.clip_mode = self.push_to_talk and callable(getattr(recognizer, "transcribe_clip", None))
+        self._capture_lock = threading.Lock()
+        self._auto_capture = True  # tests call _capture_loop directly and turn this off
 
     @property
     def push_to_talk(self) -> bool:
@@ -101,6 +107,47 @@ class AudioWorker(threading.Thread):
                 if sticky else None
             )
         self.on_listening(True)
+        if self.clip_mode and self._auto_capture:
+            threading.Thread(target=self._capture_loop, name="ptt-capture", daemon=True).start()
+
+    def _capture_loop(self, clock=time.time) -> None:
+        """Clip mode: record + transcribe while the window is open, then hand off.
+
+        ``now`` passed to :meth:`handle_transcript` is the moment recording *started*, not
+        when transcription finished. Recording can run to the window's end and Whisper then
+        takes a second or two more; judged at completion time the window would already be
+        shut and every command would be discarded. The speech happened while the window
+        was open — that is what the timestamp says.
+        """
+        if not self._capture_lock.acquire(blocking=False):
+            return  # a capture is already running; do not stack a second recording
+        try:
+            while not self._stop.is_set():
+                started = clock()
+                with self._lock:
+                    if not self.window.is_open(started):
+                        break
+                    deadline = self.window.deadline()
+                    sticky = self._sticky_until is not None
+                remaining = max(0.5, (deadline or started) - started)
+                text = self.recognizer.transcribe_clip(remaining)
+
+                if not text.strip():
+                    # Nobody spoke. A check-in keeps waiting for its full window; a button
+                    # press gets told, once, and the window is retired.
+                    if sticky and self.window.is_open(clock()):
+                        continue
+                    self._close_window()
+                    self.speak("I didn't hear anything. Press the button and try again.")
+                    break
+
+                self.handle_transcript(text, now=started)
+                # handle_transcript closes the window, unless a sticky check-in re-extended
+                # it after an answer it could not classify — in which case, record again.
+                if not self.window.is_open(clock()):
+                    break
+        finally:
+            self._capture_lock.release()
 
     def open_check_in(self, now: float | None = None) -> None:
         """Listen for an answer to a spoken check-in — no button press required.
@@ -177,8 +224,9 @@ class AudioWorker(threading.Thread):
         """Wait for presses and open talk windows; prompt if a window closes unused."""
         while not self._stop.is_set():
             if not self.trigger.wait_for_press(timeout=0.5):
-                # No press. Retire a window that ran out without any speech in it.
-                if self.window.expired(time.time()):
+                # No press. Retire a window that ran out without any speech in it. In clip
+                # mode the capture loop owns the window's lifecycle and says this itself.
+                if not self.clip_mode and self.window.expired(time.time()):
                     self._close_window()
                     self.speak("I didn't hear anything. Press the button and try again.")
                 continue
@@ -190,6 +238,14 @@ class AudioWorker(threading.Thread):
         if self.push_to_talk:
             threading.Thread(target=self._trigger_loop, name="ptt-trigger",
                              daemon=True).start()
+        if self.clip_mode:
+            # No always-on stream: the mic is only open while a window is. Captures are
+            # started by open_window (button press or check-in); this thread just waits.
+            warm = getattr(self.recognizer, "warm_up", None)
+            if callable(warm):
+                warm()
+            self._stop.wait()
+            return
         for transcript in self.recognizer.listen():
             if self._stop.is_set():
                 break

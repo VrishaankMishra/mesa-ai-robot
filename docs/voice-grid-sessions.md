@@ -203,6 +203,13 @@ Changes made in response (VOX-006 / VOX-007):
 - **No transcript is ever spoken back.** The assistant no longer repeats a captured
   medication phrase it does not recognize. A device that talks in public must not repeat
   a word it only thinks it heard.
+- **Open-vocabulary STT option (VOX-008, `stt_engine: whisper-tiny`).** Vosk-small is a
+  closed-vocabulary decoder: a medication name outside its compiled lexicon is not
+  misheard, it is unrepresentable. MeSA can *say* all eight station medications because
+  TTS works letters→sounds with no vocabulary gate; it could not *hear* them because Vosk
+  works sounds→one-of-N-known-words. faster-whisper (subword tokens) has no such gate,
+  and push-to-talk gives it the bounded clip it needs. The eight names are passed as its
+  `initial_prompt`. Not yet tried on the Pi; Vosk remains the default until it is.
 
 **Still owed:** none of this is *measured*. The `tv` cells remain the real outstanding
 work — pick the noise source and volume, write it above, and run the grid. Until then the

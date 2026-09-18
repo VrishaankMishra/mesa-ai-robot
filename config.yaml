@@ -43,8 +43,21 @@ escalation:
 
 voice:
   wake_word: mesa
-  stt_engine: vosk              # swappable: "vosk" | "whisper-tiny"
+  # "vosk" is the streaming, closed-vocabulary engine: it can only ever emit words in its
+  # compiled lexicon, so a medication name outside it is unrepresentable, not misheard.
+  # "whisper-tiny" is open-vocabulary (any name is transcribable) and pairs with
+  # push-to-talk, which gives it the bounded clip it needs. Switch to whisper-tiny once
+  # it has been tried on the Pi (VOX-008); keep vosk until then.
+  stt_engine: vosk              # "vosk" | "whisper-tiny" | "whisper-base"
   vosk_model_path: models/vosk-model-small-en-us
+
+  whisper:
+    model_path: null            # local CTranslate2 model dir; null = auto-download on first use
+                                #   (Systran/faster-whisper-<size>) — do that at HOME, not in the demo room
+    compute_type: int8          # CPU-friendly on the Pi 5
+    silence_seconds: 1.2        # stop recording this long after the person stops talking
+    energy_threshold: 600       # int16 RMS floor for "someone is talking"; the recorder calibrates
+                                #   above the room's own noise floor from the first 0.5 s
 
   # Restrict Vosk to the words MeSA actually needs (VOX-007). The open vocabulary is
   # ~100k words; a noisy room lets the decoder pick any of them, which at the 2026-09-13
