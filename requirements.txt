@@ -10,6 +10,7 @@ numpy==1.26.4
 
 # --- Audio (offline STT/TTS) ---
 vosk==0.3.44          # 0.3.45 has no macOS x86_64 wheel; 0.3.44 installs on Intel+ARM Macs & Linux
+faster-whisper==1.2.1 # open-vocabulary STT (VOX-008); ctranslate2 ships cp311 aarch64 wheels, so no build on the Pi
 pyttsx3==2.90
 sounddevice==0.4.7
 

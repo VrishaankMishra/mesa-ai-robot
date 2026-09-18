@@ -135,23 +135,97 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
         print(f"[live] camera {camera_index} unavailable — vision off "
               "(check the connection and camera permissions).")
 
+    # STT engine selection (VOX-001 / VOX-008). "vosk" needs a downloaded model directory;
+    # "whisper-tiny" (or whisper-base) is open-vocabulary and needs no grammar — see
+    # mesa/audio/stt.py for why that matters for medication names.
+    stt_engine = str(get(cfg, "voice.stt_engine", "vosk")).lower()
+    use_whisper = stt_engine.startswith("whisper")
     vosk_path = Path(get(cfg, "voice.vosk_model_path", "models/vosk-model-small-en-us"))
-    if vosk_path.exists():
+    if use_whisper or vosk_path.exists():
         from mesa.audio.assistant import VoiceAssistant
-        from mesa.audio.stt import VoskRecognizer
         from mesa.audio.worker import AudioWorker
         from mesa.alerts.ntfy import send_alert
         from mesa.audio.tts import speak as tts_speak
+        from mesa.audio.vocabulary import spoken_form
 
         topic = get(cfg, "alerts.ntfy_topic", "")
+        med_aliases = get(cfg, "voice.med_aliases", {}) or {}
         assistant = VoiceAssistant(
-            db, alert_fn=lambda msg: send_alert(topic, msg, title="MeSA help")
+            db, alert_fn=lambda msg: send_alert(topic, msg, title="MeSA help"),
+            med_aliases=med_aliases,
         )
-        workers.append(AudioWorker(
-            bus, assistant, VoskRecognizer(str(vosk_path)),
+        voice_meds = {m["name"] for m in db.list_medications(active_only=False)}
+        voice_meds |= {s["med_name"] for s in db.get_schedule()}
+
+        if use_whisper:
+            from mesa.audio.stt import WhisperRecognizer
+
+            size = stt_engine.split("-", 1)[1] if "-" in stt_engine else \
+                get(cfg, "voice.whisper.model_size", "tiny")
+            recognizer = WhisperRecognizer(
+                model_size=size,
+                model_path=get(cfg, "voice.whisper.model_path", None) or None,
+                compute_type=get(cfg, "voice.whisper.compute_type", "int8"),
+                silence_seconds=get(cfg, "voice.whisper.silence_seconds", 1.2),
+                energy_threshold=get(cfg, "voice.whisper.energy_threshold", 600.0),
+                # The station's medication names, in their spoken forms, bias decoding.
+                hint_words=[spoken_form(n, med_aliases) for n in sorted(voice_meds)],
+            )
+            print(f"[live] STT: faster-whisper '{size}' (open vocabulary; every medication "
+                  f"name is transcribable). First use downloads the model — do that at "
+                  f"home, not in the demo room (see models/README.md).")
+        else:
+            from mesa.audio.stt import VoskRecognizer
+
+            # Constrain Vosk to MeSA's own vocabulary (VOX-007), built from the command
+            # phrases plus this station's medication names (spoken aliases applied).
+            grammar = None
+            if get(cfg, "voice.constrain_vocabulary", True):
+                from mesa.audio.vocabulary import build_grammar, build_phrases
+
+                grammar = build_grammar(voice_meds, med_aliases)
+                print(f"[live] voice vocabulary constrained to "
+                      f"{len(build_phrases(voice_meds, med_aliases))} phrases "
+                      f"(open vocabulary off — see scripts/check_vocabulary.py)")
+            recognizer = VoskRecognizer(str(vosk_path), grammar=grammar)
+
+        # Push-to-talk (VOX-006): a button press replaces the wake word.
+        trigger = None
+        if get(cfg, "voice.push_to_talk.enabled", False):
+            from mesa.audio.ptt import get_trigger
+
+            trigger = get_trigger(
+                source=get(cfg, "voice.push_to_talk.source", "auto"),
+                pin=get(cfg, "voice.push_to_talk.gpio_pin", 17),
+            )
+            if getattr(trigger, "name", "none") == "keyboard":
+                print("[live] push-to-talk: press ENTER, then speak your command.")
+            else:
+                print(f"[live] push-to-talk: {getattr(trigger, 'name', 'none')} trigger.")
+
+        audio_worker = AudioWorker(
+            bus, assistant, recognizer,
             wake_word=get(cfg, "voice.wake_word", "mesa"),
             speak=lambda msg: tts_speak(msg, echo=echo),
-        ))
+            trigger=trigger,
+            window_seconds=get(cfg, "voice.push_to_talk.window_seconds", 6.0),
+            check_in_window_seconds=get(cfg, "voice.push_to_talk.check_in_window_seconds", 30.0),
+        )
+        workers.append(audio_worker)
+
+        # A spoken check-in opens its own talk window (VOX-006). Without this, push-to-talk
+        # makes "Are you okay?" unanswerable: the reply lands with no window open, is
+        # discarded, and L1 escalates to L2/L3 on someone who did answer. A person who has
+        # fallen cannot reach the button, so MeSA listens whenever MeSA is the one asking.
+        if trigger is not None:
+            _prev_check_in = engine.escalation.on_check_in
+
+            def _check_in_and_listen(reason, _prev=_prev_check_in, _w=audio_worker):
+                if _prev is not None:
+                    _prev(reason)
+                _w.open_check_in()
+
+            engine.escalation.on_check_in = _check_in_and_listen
     else:
         print(f"[live] no Vosk model at {vosk_path} — voice off (see models/README.md).")
 

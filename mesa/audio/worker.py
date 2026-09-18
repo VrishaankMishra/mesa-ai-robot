@@ -1,4 +1,4 @@
-"""Live audio worker thread (ENG-004).
+"""Live audio worker thread (ENG-004, push-to-talk VOX-006).
 
 Runs the STT loop and answers voice commands (same behaviour as ``scripts/voice_loop.py``),
 and additionally publishes engine events onto the :class:`~mesa.engine.events.EventBus`:
@@ -6,6 +6,18 @@ and additionally publishes engine events onto the :class:`~mesa.engine.events.Ev
 - ``HELP_REQUEST`` on a HELP intent, so escalation starts immediately.
 - ``ACKNOWLEDGE`` on any other recognized intent — a person answering MeSA is by
   definition responsive, which clears a pending check-in (fall or inactivity).
+
+**Two listening modes.** Without a trigger the worker is wake-word driven: every
+transcript is tested against the wake word and ignored unless it matches. With a
+:class:`~mesa.audio.ptt.PushToTalk` trigger it is push-to-talk: a button press opens a
+:class:`~mesa.audio.ptt.TalkWindow`, and only speech finalized inside that window is
+acted on — the press *is* the wake signal, so no wake word is required (one is still
+stripped if the user says it out of habit).
+
+Push-to-talk exists because the wake word is unreliable in noise and we have no measured
+data on how it fails there; see ``mesa/audio/ptt.py`` for the full reasoning. Note that
+the stream is gated, not stopped: Vosk keeps transcribing, but anything it hears outside
+an open window is discarded before it reaches the intent parser.
 
 :meth:`AudioWorker.handle_transcript` holds all of that decision logic with speech in and
 speech out injected, so it is unit-testable without a microphone; :meth:`run` is the thin
@@ -19,7 +31,12 @@ import time
 
 from mesa.audio.assistant import VoiceAssistant
 from mesa.audio.intents import Intent, matches_wake_word, parse_intent, strip_wake_word
+from mesa.audio.ptt import TalkWindow
 from mesa.engine.events import ACKNOWLEDGE, HELP_REQUEST, Event, EventBus
+
+# Vosk's out-of-vocabulary token (see mesa.audio.vocabulary). A grammar-constrained
+# recognizer emits this for anything it cannot match, so it must never be parsed as speech.
+UNK_TOKEN = "[unk]"
 
 
 class AudioWorker(threading.Thread):
@@ -30,6 +47,10 @@ class AudioWorker(threading.Thread):
         recognizer,
         wake_word: str,
         speak=None,
+        trigger=None,
+        window_seconds: float = 6.0,
+        check_in_window_seconds: float = 30.0,
+        on_listening=None,
     ):
         super().__init__(name="audio-worker", daemon=True)
         self.bus = bus
@@ -37,17 +58,149 @@ class AudioWorker(threading.Thread):
         self.recognizer = recognizer
         self.wake_word = wake_word.lower()
         self.speak = speak or (lambda _msg: None)
+        self.trigger = trigger
+        self.window = TalkWindow(window_seconds)
+        # Check-ins get a longer window than a command: a person answering "Are you okay?"
+        # after a fall is slower than someone pressing a button to ask a question.
+        self.check_in_window_seconds = check_in_window_seconds
+        # Called with True when a talk window opens and False when it closes, so the OLED
+        # face / any indicator can show that MeSA is actually listening. Silent by default.
+        self.on_listening = on_listening or (lambda _listening: None)
+        # Absolute time until which an open window is "sticky": an utterance we cannot
+        # classify re-opens it instead of closing it. Set for escalation check-ins, where
+        # giving up after one garbled reply would escalate a person who did answer.
+        self._sticky_until: float | None = None
+        self._lock = threading.Lock()
         self._stop = threading.Event()
+        # Clip mode (VOX-008): push-to-talk with a ClipRecognizer (Whisper). Instead of
+        # gating an always-on stream, opening a window *starts a recording*. One capture at
+        # a time; a press during a capture is ignored rather than queued.
+        self.clip_mode = self.push_to_talk and callable(getattr(recognizer, "transcribe_clip", None))
+        self._capture_lock = threading.Lock()
+        self._auto_capture = True  # tests call _capture_loop directly and turn this off
+
+    @property
+    def push_to_talk(self) -> bool:
+        return self.trigger is not None
 
     def stop(self) -> None:
         self._stop.set()
+        if self.trigger is not None:
+            self.trigger.close()
+
+    def open_window(
+        self,
+        now: float | None = None,
+        seconds: float | None = None,
+        sticky: bool = False,
+    ) -> None:
+        """Open a talk window. Called by the trigger thread on a button press.
+
+        ``sticky`` keeps the window alive across utterances MeSA cannot classify, for the
+        full ``seconds``. :meth:`open_check_in` uses it; a button press does not.
+        """
+        now = now if now is not None else time.time()
+        with self._lock:
+            self.window.open(now, seconds)
+            self._sticky_until = (
+                now + (seconds if seconds is not None else self.window.window_seconds)
+                if sticky else None
+            )
+        self.on_listening(True)
+        if self.clip_mode and self._auto_capture:
+            threading.Thread(target=self._capture_loop, name="ptt-capture", daemon=True).start()
+
+    def _capture_loop(self, clock=time.time) -> None:
+        """Clip mode: record + transcribe while the window is open, then hand off.
+
+        ``now`` passed to :meth:`handle_transcript` is the moment recording *started*, not
+        when transcription finished. Recording can run to the window's end and Whisper then
+        takes a second or two more; judged at completion time the window would already be
+        shut and every command would be discarded. The speech happened while the window
+        was open — that is what the timestamp says.
+        """
+        if not self._capture_lock.acquire(blocking=False):
+            return  # a capture is already running; do not stack a second recording
+        try:
+            while not self._stop.is_set():
+                started = clock()
+                with self._lock:
+                    if not self.window.is_open(started):
+                        break
+                    deadline = self.window.deadline()
+                    sticky = self._sticky_until is not None
+                remaining = max(0.5, (deadline or started) - started)
+                text = self.recognizer.transcribe_clip(remaining)
+
+                if not text.strip():
+                    # Nobody spoke. A check-in keeps waiting for its full window; a button
+                    # press gets told, once, and the window is retired.
+                    if sticky and self.window.is_open(clock()):
+                        continue
+                    self._close_window()
+                    self.speak("I didn't hear anything. Press the button and try again.")
+                    break
+
+                self.handle_transcript(text, now=started)
+                # handle_transcript closes the window, unless a sticky check-in re-extended
+                # it after an answer it could not classify — in which case, record again.
+                if not self.window.is_open(clock()):
+                    break
+        finally:
+            self._capture_lock.release()
+
+    def open_check_in(self, now: float | None = None) -> None:
+        """Listen for an answer to a spoken check-in — no button press required.
+
+        MeSA asked "Are you okay?", so MeSA listens. Without this, push-to-talk would make
+        the check-in unanswerable: the reply arrives with no window open, is discarded, and
+        the engine escalates L1 -> L2 -> L3 on someone who *did* answer. The person this
+        matters most for is on the floor and cannot reach the button.
+        """
+        self.open_window(now, seconds=self.check_in_window_seconds, sticky=True)
+
+    def _close_window(self) -> None:
+        with self._lock:
+            was_open = self.window.is_armed()
+            self.window.close()
+            self._sticky_until = None
+        if was_open:
+            self.on_listening(False)
 
     def handle_transcript(self, transcript: str, now: float | None = None) -> bool:
-        """Process one finalized transcript. Returns True if it was a wake-word command."""
-        if not matches_wake_word(transcript, self.wake_word):
-            return False
+        """Process one finalized transcript. Returns True if it was acted on.
+
+        In push-to-talk mode a transcript counts only inside an open talk window; in
+        wake-word mode it counts only if it contains the wake word.
+        """
         now = now if now is not None else time.time()
-        parsed = parse_intent(strip_wake_word(transcript, self.wake_word))
+
+        if self.push_to_talk:
+            with self._lock:
+                if not self.window.is_open(now):
+                    return False  # crowd noise outside a window: discarded, never parsed
+            # The button was the wake signal. Strip a spoken wake word if there is one,
+            # but do not require it.
+            text = strip_wake_word(transcript, self.wake_word)
+            # Read the sticky deadline before closing — _close_window clears it, and the
+            # retry path below still needs to know whether this was a check-in window.
+            sticky_until = self._sticky_until
+            self._close_window()
+        else:
+            if not matches_wake_word(transcript, self.wake_word):
+                return False
+            text = strip_wake_word(transcript, self.wake_word)
+            sticky_until = None
+
+        if not text.strip() or text.strip().lower() == UNK_TOKEN:
+            # Grammar-constrained recognizer heard something it has no words for.
+            self._retry_if_sticky(now, sticky_until)
+            self.speak("Sorry, I didn't catch that. Please say it again.")
+            return True
+
+        parsed = parse_intent(text)
+        if parsed.intent == Intent.UNKNOWN:
+            self._retry_if_sticky(now, sticky_until)
 
         if parsed.intent == Intent.HELP:
             self.bus.publish(Event(HELP_REQUEST, {}, ts=now))
@@ -58,7 +211,41 @@ class AudioWorker(threading.Thread):
         self.speak(self.assistant.respond(parsed, now=now))
         return True
 
+    def _retry_if_sticky(self, now: float, sticky_until: float | None) -> None:
+        """Keep a sticky (check-in) window open after a reply we could not classify."""
+        if sticky_until is None or now >= sticky_until:
+            return
+        with self._lock:
+            self.window.extend_to(sticky_until)
+            self._sticky_until = sticky_until
+        self.on_listening(True)
+
+    def _trigger_loop(self) -> None:  # pragma: no cover - thread + blocking trigger
+        """Wait for presses and open talk windows; prompt if a window closes unused."""
+        while not self._stop.is_set():
+            if not self.trigger.wait_for_press(timeout=0.5):
+                # No press. Retire a window that ran out without any speech in it. In clip
+                # mode the capture loop owns the window's lifecycle and says this itself.
+                if not self.clip_mode and self.window.expired(time.time()):
+                    self._close_window()
+                    self.speak("I didn't hear anything. Press the button and try again.")
+                continue
+            if self._stop.is_set():
+                break
+            self.open_window()
+
     def run(self) -> None:  # pragma: no cover - blocks on the microphone stream
+        if self.push_to_talk:
+            threading.Thread(target=self._trigger_loop, name="ptt-trigger",
+                             daemon=True).start()
+        if self.clip_mode:
+            # No always-on stream: the mic is only open while a window is. Captures are
+            # started by open_window (button press or check-in); this thread just waits.
+            warm = getattr(self.recognizer, "warm_up", None)
+            if callable(warm):
+                warm()
+            self._stop.wait()
+            return
         for transcript in self.recognizer.listen():
             if self._stop.is_set():
                 break
