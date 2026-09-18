@@ -60,6 +60,19 @@ One main process with worker threads/processes communicating over a
 
 ## Git / commits
 
+- **Two repos — private first, always.** `VrishaankMishra/mesa-ai-robot-private` is the working
+  repo: every branch, commit, push and PR goes there. The public `VrishaankMishra/mesa-ai-robot`
+  is a *generated* copy — `scripts/publish_public_copy.sh` rebuilds it from private `main` with
+  `EXCLUDE_PATHS` scrubbed from the entire history, then force-pushes. **Never push, branch or
+  open a PR on the public repo directly.** If the checkout you are in has `origin` pointing at
+  the public URL, stop and move to the private repo before committing anything.
+- **What never goes public** (see `private/README.md`): anything that names a person we might
+  email, ranks people, carries strategy or application material — and, since the Sept 13 demo,
+  anything about a live event (venue, date, what went wrong) until it has been reviewed. Such
+  content lives in `private/` or an excluded path (`docs/engineering-notebook.md`,
+  `docs/plan-to-demo.md`, `docs/demo-runbook.md`, `docs/demo-script.md`, `docs/paper/`). A file
+  created in `docs/` inherits public visibility with nobody deciding to publish it. Code comments
+  and commit messages are not scrubbed by the publish script — keep them to mechanism.
 - **All commits in this repo are authored as `VrishaankMishra <vrishaank.mishra@gmail.com>`**
   (set via local git config). Do **not** add a `Co-Authored-By` trailer or any other author.
 - Commit to a feature branch, not `main`, and only commit/push when explicitly asked.
