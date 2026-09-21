@@ -212,3 +212,35 @@ def test_reimport_after_clear_does_not_duplicate(tmp_path):
         db.add_schedule("advil", "13:00", "1 tablet")
     assert len(db.get_schedule()) == 1
     db.close()
+
+
+def test_connection_is_usable_from_another_thread(tmp_path):
+    """The audio worker reads the DB from its own thread; the default guard forbids it.
+
+    VoiceAssistant resolves a spoken medication name against the medication and
+    schedule tables, and logs a help_request, all from inside the audio loop. With
+    sqlite3's default check_same_thread the first such call raises ProgrammingError
+    and kills the worker thread, which takes the whole voice path down rather than
+    failing one command. Unit tests that call the assistant directly run on the
+    test's own thread and cannot catch it; this one crosses a thread boundary.
+    """
+    import threading
+
+    db = Database(tmp_path / "t.db")
+    db.add_medication("advil")
+    result: dict[str, object] = {}
+
+    def worker():
+        try:
+            result["names"] = {m["name"] for m in db.list_medications(active_only=False)}
+            db.log_event("help_request", detail="from a worker thread")
+        except Exception as exc:  # pragma: no cover - the failure we are guarding against
+            result["error"] = exc
+
+    t = threading.Thread(target=worker)
+    t.start()
+    t.join(timeout=5)
+
+    assert "error" not in result, f"cross-thread DB access failed: {result.get('error')}"
+    assert result["names"] == {"advil"}
+    db.close()

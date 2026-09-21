@@ -95,11 +95,22 @@ def _start_of_today_epoch(now: float | None = None) -> float:
 
 
 class Database:
-    """Thin SQLite DAO for MeSA. Not thread-safe across connections; use one per process."""
+    """Thin SQLite DAO for MeSA. One connection per process, shared across worker threads.
+
+    ``check_same_thread=False`` is required, not a shortcut. MeSA is one process with
+    worker threads over an event queue, and the connection is opened on the main thread
+    while the *audio* worker reads from it on its own thread — VoiceAssistant resolves a
+    spoken medication name against the medication and schedule tables, and logs a
+    help_request, both from inside the audio loop. With the default guard that raises
+    ``sqlite3.ProgrammingError`` and kills the thread, taking the whole voice path down
+    mid-sentence. Python's sqlite3 is built in SQLite's serialized mode, which holds a
+    mutex per connection, so sharing one connection across these threads is safe; the
+    guard it disables is CPython's conservative check, not SQLite's own locking.
+    """
 
     def __init__(self, path: str | Path = "events.db"):
         self.path = str(path)
-        self.conn = sqlite3.connect(self.path)
+        self.conn = sqlite3.connect(self.path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.init_schema()
