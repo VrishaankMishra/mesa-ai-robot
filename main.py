@@ -210,6 +210,14 @@ def _live(engine: DecisionEngine, db: Database, cfg: dict, echo: bool) -> None:
             trigger=trigger,
             window_seconds=get(cfg, "voice.push_to_talk.window_seconds", 6.0),
             check_in_window_seconds=get(cfg, "voice.push_to_talk.check_in_window_seconds", 30.0),
+            # The talk window is otherwise invisible: nothing prints, lights up or beeps
+            # when a press opens one. The operator needs to know whether a press
+            # registered at all, separately from whether the command was understood —
+            # they are different failures with different responses.
+            on_listening=lambda listening: print(
+                "[listening] speak now" if listening else "[listening] window closed",
+                flush=True,
+            ),
         )
         workers.append(audio_worker)
 
