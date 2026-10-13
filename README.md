@@ -31,23 +31,28 @@ station, LED lamp, speakerphone): [setup tour video](https://github.com/Vrishaan
 
 The detector scored 0.953 mAP@50 — then failed at 8 PM in its own room. Instead of
 patching around that, the robot became the instrument: a **voice-guided evaluation
-protocol where scripted placement makes ground truth free** — 1,584 scored field
-evaluations across an 8-condition lighting grid × 3 model arms, zero manual annotation,
-~90 minutes of operator time.
+protocol where scripted placement makes ground truth free** — 1,584 scripted field
+placements across an 8-condition lighting grid, each scored against 3 model arms
+(4,752 scored evaluations), zero manual annotation, ~90 minutes of operator time.
 
-**Findings** (full paper: [docs/paper/domain-shift-paper.md](docs/paper/domain-shift-paper.md) ·
+**Findings** — detection rates below are single-medication scenes, pooled across frames
+(full paper: [docs/paper/domain-shift-paper.md](docs/paper/domain-shift-paper.md) ·
 data: [docs/eval/domain_shift_results.csv](docs/eval/domain_shift_results.csv) ·
 figures: [docs/eval/figures/](docs/eval/figures)):
 
 - Detection collapses at **both** lighting extremes — direct morning sun is *worse than
-  near-darkness* — and which containers fail is set by their reflectance (the victims
-  **invert** between extremes).
-- A **$10 LED lamp** restores near-dark detection from 41–77% → 95–100%.
+  near-darkness* (deployed model: 27–29% in morning sun vs 65% in the dim room) — and
+  which containers fail is set by their reflectance (the victims **invert** between
+  extremes).
+- A **$10 LED lamp** lifts dim-room identification across every arm: 65% → 88% for the
+  deployed model, 21% → 47% for v1, 44% → 64% for v3syn.
 - The wrong-medication safeguard **degrades as lighting improves** (confident vision =
-  confident misidentification of look-alikes) — a safety asymmetry.
+  confident misidentification of look-alikes) — a safety asymmetry: in the four
+  best-lit conditions the deployed model rejects the impostor only 18–46% of the time.
 - Naive synthetic lighting augmentation **failed off-domain** while remaining
-  indistinguishable on validation mAP — the three arms span 44 deployed points inside a
-  0.95–0.98 validation band.
+  indistinguishable-or-better on validation mAP — inside a 0.95–0.98 validation band,
+  the three arms are separated by 15 points overall (58–74%) and up to 44 points in a
+  single condition (evening dim: 21% vs 65%).
 
 ![Detection rate by condition](docs/eval/figures/heatmap_best.png)
 

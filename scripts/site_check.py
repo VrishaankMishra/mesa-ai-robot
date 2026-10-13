@@ -10,9 +10,10 @@ turns an unmeasured room into a measured one in the time it takes to set up a ta
 
 Place the medications at the marks, then run it. It reports, in order:
 
-1. **The scene** — median grey level and the fraction of blown highlights. Direct sun was
-   the worst cell in the grid (0-41%), and blown highlights are its signature, so this is
-   the number that says whether the room is safe before any detection runs.
+1. **The scene** — median grey level and the fraction of blown highlights. Direct morning
+   sun was the worst condition in the grid (27-29% overall for the deployed model, with
+   some medications at 0%), and blown highlights are its signature, so this is the
+   number that says whether the room is safe before any detection runs.
 2. **Detection with the camera on auto** — per medication, how often it is seen and at what
    confidence. This is the honest answer to "does MeSA work in this room".
 3. **Detection with the camera locked** — the same measurement after freezing exposure,
