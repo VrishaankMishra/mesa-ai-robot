@@ -66,3 +66,32 @@ def test_best_conf_for_picks_ground_truth_match():
     dets = [("advil", 0.42), ("advil", 0.61), ("melatonin", 0.9)]
     assert ea.best_conf_for(dets, "advil") == 0.61
     assert ea.best_conf_for(dets, "vitamin_d3") == 0.0
+
+
+class TestSites:
+    """Both on-disk layouts score in one run and every row gets a site."""
+
+    def _layouts(self, tmp_path):
+        old = tmp_path / "evening_dim" / "20260808_211107"
+        new = tmp_path / "living_room" / "evening_dim" / "20261019_200000"
+        for d in (old, new):
+            d.mkdir(parents=True)
+            (d / "manifest.csv").write_text("filename\n")
+        return old / "manifest.csv", new / "manifest.csv"
+
+    def test_find_manifests_sees_both_layouts(self, tmp_path):
+        old, new = self._layouts(tmp_path)
+        assert ea.find_manifests(tmp_path) == [old, new]
+
+    def test_original_layout_is_default_site(self, tmp_path):
+        old, _ = self._layouts(tmp_path)
+        assert ea.site_for(old, {}, tmp_path, "home_office") == "home_office"
+        assert ea.site_for(old, {"site": ""}, tmp_path, "home_office") == "home_office"
+
+    def test_site_layout_is_named_by_its_directory(self, tmp_path):
+        _, new = self._layouts(tmp_path)
+        assert ea.site_for(new, {}, tmp_path, "home_office") == "living_room"
+
+    def test_manifest_column_wins_over_layout(self, tmp_path):
+        old, _ = self._layouts(tmp_path)
+        assert ea.site_for(old, {"site": "kitchen"}, tmp_path, "home_office") == "kitchen"

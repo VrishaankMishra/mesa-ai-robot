@@ -3,17 +3,23 @@
 
 Voice-guided, standardized placement session for ONE environmental condition.
 Because placement is scripted, ground truth is free: no labeling ever. Frames and a
-manifest land in ``eval_data/<condition>/<session>/``; scoring happens offline on the
-laptop with ``scripts/eval_analyze.py`` against any set of model weights.
+manifest land in ``eval_data/[<site>/]<condition>/<session>/``; scoring happens offline
+on the laptop with ``scripts/eval_analyze.py`` against any set of model weights.
 
 One session (~9 min): every bottle at two marks (12 frames each, slow rotation),
 an optional unknown-medication probe (e.g. the untrained Benadryl box), and a final
 all-bottles group scene.
 
     .venv/bin/python scripts/eval_capture.py \
-        --condition evening_lamps_on \
+        --site living_room --condition evening_lamps_on \
         --bottles mylanta,vitamin_d3,bayer_aspirin,cvs_allergy,omeprazole,melatonin,ashwagandha,advil \
         --unknown benadryl
+
+``--site`` names the room so a replication grid in a second room keeps apart from the
+original (the Aug 2026 grid predates the flag and sits directly under ``eval_data/``;
+the analyzer treats that layout as the default site). Each session also writes
+``scene.json`` with the median grey level of the empty table at session start — the
+illumination ordinate the lighting-trend analysis in ``eval_stats.py`` runs over.
 
 Hardware-bound glue (camera + speaker); the manifest format is the contract with the
 analyzer and is unit-tested there.
@@ -23,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import subprocess
 import sys
 import time
@@ -53,6 +60,9 @@ def main() -> int:
     p = argparse.ArgumentParser(description="MeSA domain-shift evaluation session")
     p.add_argument("--condition", required=True,
                    help="condition label, e.g. morning_lamps_off, evening_lamps_on")
+    p.add_argument("--site", default=None,
+                   help="room label for a replication grid, e.g. living_room; frames go "
+                        "under eval_data/<site>/ (omit for the original single-room layout)")
     p.add_argument("--bottles", required=True, help="comma-separated known med labels")
     p.add_argument("--unknown", default=None,
                    help="label for an untrained wrong-med probe item (e.g. benadryl)")
@@ -65,10 +75,12 @@ def main() -> int:
     args = p.parse_args()
 
     import cv2
+    import numpy as np
 
     bottles = [b.strip() for b in args.bottles.split(",") if b.strip()]
     session = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = EVAL_DIR / args.condition / session
+    site_dir = EVAL_DIR / args.site if args.site else EVAL_DIR
+    out_dir = site_dir / args.condition / session
     out_dir.mkdir(parents=True, exist_ok=True)
 
     cap = cv2.VideoCapture(args.camera)
@@ -78,11 +90,27 @@ def main() -> int:
         print("Could not open camera", file=sys.stderr)
         return 1
 
+    # Scene luminance of the empty table, before anything is placed: the per-session
+    # illumination measurement the paper reports (median grey 30–116 across the grid).
+    time.sleep(2.5)  # let auto-exposure settle before judging the room
+    frame = grab(cap, flush=10)
+    if frame is not None:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        scene = {"site": args.site or "", "condition": args.condition, "session": session,
+                 "median_gray": float(np.median(gray)),
+                 "blown_pct": 100.0 * float((gray > 250).mean()),
+                 "dark_pct": 100.0 * float((gray < 20).mean()),
+                 "captured_at": datetime.now().isoformat(timespec="seconds")}
+        (out_dir / "scene.json").write_text(json.dumps(scene, indent=2) + "\n")
+        print(f"scene: median gray {scene['median_gray']:.0f}  "
+              f"blown {scene['blown_pct']:.1f}%  dark {scene['dark_pct']:.1f}%", flush=True)
+        say(f"Scene brightness {scene['median_gray']:.0f}.")
+
     manifest_path = out_dir / "manifest.csv"
     mf = open(manifest_path, "w", newline="")
     writer = csv.writer(mf)
     writer.writerow(["filename", "ground_truth", "scene", "mark_m",
-                     "condition", "session", "captured_at"])
+                     "condition", "session", "captured_at", "site"])
 
     def burst(label: str, scene: str, mark_m: float, n: int) -> None:
         say("Capturing. Turn it slowly.")
@@ -94,7 +122,8 @@ def main() -> int:
             fname = f"{label}__{scene}__d{int(mark_m*10):02d}__{i:02d}.jpg"
             cv2.imwrite(str(out_dir / fname), frame)
             writer.writerow([fname, label, scene, mark_m, args.condition,
-                             session, datetime.now().isoformat(timespec="seconds")])
+                             session, datetime.now().isoformat(timespec="seconds"),
+                             args.site or ""])
             time.sleep(args.interval)
         mf.flush()
 

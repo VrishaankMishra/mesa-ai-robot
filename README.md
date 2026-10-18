@@ -90,9 +90,11 @@ bash scripts/setup_env.sh           # creates .venv, installs the stack, verifie
 | Voice loop | `python scripts/voice_loop.py` | mic/speaker + Vosk model |
 | Dashboard | `bash scripts/run_dashboard.sh` | — (LAN at `:8501`) |
 | Dataset capture (Pi, voice-guided) | `python scripts/capture_guided.py --bottles … --lighting …` | camera + speaker |
-| **Domain-shift eval session** | `python scripts/eval_capture.py --condition …` | camera + speaker |
-| Score eval sessions | `python scripts/eval_analyze.py --models …` | eval_data + weights |
-| Regenerate paper figures | `python scripts/eval_figures.py` | results CSV |
+| **Domain-shift eval session** | `python scripts/eval_capture.py --site <room> --condition …` | camera + speaker |
+| Score eval sessions (all sites) | `python scripts/eval_analyze.py --models …` | eval_data + weights |
+| Scene luminance per session | `python scripts/eval_luminance.py` | eval_data |
+| Statistics pass + site replication | `python scripts/eval_stats.py` | results CSV |
+| Regenerate paper figures | `python scripts/eval_figures.py [--site <room>]` | results CSV |
 
 Config (thresholds, model paths, ntfy topic) lives in [`config.yaml`](config.yaml).
 Weights and images are gitignored — see [`models/README.md`](models/README.md) and

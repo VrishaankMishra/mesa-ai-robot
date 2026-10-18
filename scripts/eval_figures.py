@@ -6,6 +6,10 @@ publication PNGs to docs/eval/figures/. Model arms are auto-detected, so re-runn
 after adding v3 rows regenerates every figure with the new arm included.
 
     .venv/bin/python scripts/eval_figures.py
+    .venv/bin/python scripts/eval_figures.py --site living_room   # -> figures/living_room/
+
+One site per run: rows carrying another site's label are skipped, and rows with no
+site column (the original grid) belong to the default site, so figures never pool rooms.
 
 Design follows the repo's dataviz conventions: sequential single-hue ramp for
 magnitude (heatmap), fixed-order categorical hues for model/series identity,
@@ -14,6 +18,7 @@ values labeled in ink (never series color), one axis per chart, recessive grid.
 
 from __future__ import annotations
 
+import argparse
 import csv
 from collections import defaultdict
 from pathlib import Path
@@ -26,6 +31,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 CSV = Path("docs/eval/domain_shift_results.csv")
 OUT = Path("docs/eval/figures")
+DEFAULT_SITE = "home_office"
 
 # Validated reference palette (light mode).
 SURFACE = "#fcfcfb"
@@ -56,13 +62,13 @@ MEDS = ["mylanta", "vitamin_d3", "bayer_aspirin", "cvs_allergy",
         "omeprazole", "melatonin", "ashwagandha", "advil"]
 
 
-def load():
-    """-> {(model, condition, med): (hits, n)} for single scenes."""
+def load(csv_path: Path = CSV, site: str = DEFAULT_SITE, default_site: str = DEFAULT_SITE):
+    """-> {(model, condition, med): (hits, n)} for single scenes of ONE site."""
     cells = defaultdict(lambda: [0, 0])
     models = []
-    with open(CSV) as f:
+    with open(csv_path) as f:
         for r in csv.DictReader(f):
-            if r["scene"] != "single":
+            if r["scene"] != "single" or (r.get("site") or default_site) != site:
                 continue
             key = (r["model"], r["condition"], r["ground_truth"])
             cells[key][0] += int(r["correct"])
@@ -172,13 +178,25 @@ def fig_model_arms(cells, models):
 
 
 def main() -> int:
+    global OUT
+    p = argparse.ArgumentParser(description="Paper figures from the results CSV")
+    p.add_argument("--csv", default=str(CSV))
+    p.add_argument("--site", default=DEFAULT_SITE, help="site to draw (one per run)")
+    p.add_argument("--default-site", default=DEFAULT_SITE,
+                   help="site label for rows with no site column")
+    args = p.parse_args()
+    if args.site != args.default_site:
+        OUT = OUT / args.site
+    cells, models = load(Path(args.csv), args.site, args.default_site)
+    if not models:
+        print(f"no single-scene rows for site {args.site!r} in {args.csv}")
+        return 1
     OUT.mkdir(parents=True, exist_ok=True)
-    cells, models = load()
     primary = "best" if "best" in models else models[0]
     fig_heatmap(cells, primary, primary)
     fig_lamp_recovery(cells, primary)
     fig_model_arms(cells, models)
-    print(f"figures -> {OUT}/ (models: {models})")
+    print(f"figures -> {OUT}/ (site: {args.site}, models: {models})")
     return 0
 
 
