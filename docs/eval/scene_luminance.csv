@@ -1,0 +1,9 @@
+site,condition,session,median_gray,blown_pct,dark_pct,source
+home_office,evening_dim,20260808_211107,39.0,0.14,41.72,retro_frame00
+home_office,evening_dim_lamp,20260808_212111,40.0,0.00,45.29,retro_frame00
+home_office,evening_lamp_added,20260808_205904,75.0,0.00,16.95,retro_frame00
+home_office,evening_lights_on,20260808_204949,84.5,0.00,14.26,retro_frame00
+home_office,midday_lamp_added,20260808_132532,87.0,0.00,14.49,retro_frame00
+home_office,midday_lamps_off,20260808_131602,122.0,0.02,5.15,retro_frame00
+home_office,morning_lamps_off,20260809_081203,11.5,1.80,67.77,retro_frame00
+home_office,morning_lamps_on,20260809_082135,11.0,1.58,76.21,retro_frame00
