@@ -43,11 +43,19 @@ against an `eval_data/` frame before the first session.
 2. On the Pi (or ask Claude to launch it):
 
    ```bash
+   scripts/run_eval_session.sh <ROOM> <CONDITION>
+   ```
+
+   which runs, with the standard eight medications and the Benadryl probe filled in,
+
+   ```bash
    .venv/bin/python scripts/eval_capture.py \
        --site <ROOM> --condition <CONDITION> \
        --bottles mylanta,vitamin_d3,bayer_aspirin,cvs_allergy,omeprazole,melatonin,ashwagandha,advil \
        --unknown benadryl
    ```
+
+   The wrapper refuses a condition label that is not one of the eight below.
 
    The first thing MeSA says is the scene brightness (median grey of the empty table);
    it is written to `scene.json` in the session folder. For the original grid the same
