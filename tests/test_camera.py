@@ -7,7 +7,7 @@ driver ignores a manual value while its ``auto`` companion is still on.
 
 import pytest
 
-from mesa.vision.camera import AUTO_EXPOSURE_MANUAL, configure_capture
+from mesa.vision.camera import AUTO_EXPOSURE_AUTO, AUTO_EXPOSURE_MANUAL, configure_capture, restore_auto
 
 
 class FakeCv2:
@@ -76,6 +76,24 @@ def test_exposure_switches_to_manual_before_pinning_the_value():
     assert props.index(FakeCv2.CAP_PROP_AUTO_EXPOSURE) < props.index(FakeCv2.CAP_PROP_EXPOSURE)
     assert (FakeCv2.CAP_PROP_AUTO_EXPOSURE, AUTO_EXPOSURE_MANUAL) in cap.calls
     assert (FakeCv2.CAP_PROP_EXPOSURE, 250.0) in cap.calls
+
+
+def test_restore_auto_undoes_every_lock():
+    # A lock outlives the process (UVC controls persist in the camera), so the
+    # restore must flip all three auto switches back on, whatever was locked.
+    cap = FakeCapture()
+    configure_capture(cap, _cfg(exposure=250, white_balance=4600, focus=0), cv2_module=FakeCv2)
+    restored = restore_auto(cap, cv2_module=FakeCv2)
+    assert cap.values[FakeCv2.CAP_PROP_AUTO_EXPOSURE] == AUTO_EXPOSURE_AUTO
+    assert cap.values[FakeCv2.CAP_PROP_AUTO_WB] == 1.0
+    assert cap.values[FakeCv2.CAP_PROP_AUTOFOCUS] == 1.0
+    assert set(restored) == {"CAP_PROP_AUTO_EXPOSURE", "CAP_PROP_AUTO_WB", "CAP_PROP_AUTOFOCUS"}
+
+
+def test_restore_auto_survives_a_backend_without_the_properties():
+    class BareCv2:
+        pass
+    assert restore_auto(FakeCapture(), cv2_module=BareCv2) == {}
 
 
 def test_null_value_freezes_what_auto_chose():

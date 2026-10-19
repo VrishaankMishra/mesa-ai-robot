@@ -108,7 +108,7 @@ def main() -> int:
 
     import cv2
     from ultralytics import YOLO
-    from mesa.vision.camera import configure_capture
+    from mesa.vision.camera import configure_capture, restore_auto
 
     cap = cv2.VideoCapture(args.camera)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -142,11 +142,17 @@ def main() -> int:
                                  "lock_white_balance": True, "lock_focus": True,
                                  "exposure": None, "white_balance": None, "focus": 0}}}
     frozen = configure_capture(cap, cfg, cv2_module=cv2)
-    locked = _measure(cap, model, args.seconds)
+    try:
+        locked = _measure(cap, model, args.seconds)
+    finally:
+        # The lock lives in the camera, not this process: hand it back on auto or the
+        # next capture session inherits a frozen exposure (Oct 19, 2026).
+        restore_auto(cap, cv2_module=cv2)
     samples_l = max(1, locked["frames"] // 3)
     _report("camera LOCKED", locked, known, samples_l)
 
     print("\nfrozen values:", ", ".join(f"{k}={v}" for k, v in sorted(frozen.items())))
+    print("(camera controls restored to auto; nothing stays locked after this check)")
     print("\nIf LOCKED is no worse than AUTO, put this in config.yaml under vision:")
     print("  camera:\n    enabled: true\n    lock_exposure: true\n    lock_white_balance: true\n"
           "    lock_focus: true\n    exposure: null\n    white_balance: null\n    focus: 0")

@@ -11,7 +11,10 @@ that compares cell-for-cell with every site before it.
 | Site label | Room | Grid captured | Notes |
 |---|---|---|---|
 | `home_office` | original station (the paper's room) | Aug 8–9, 2026 | predates `--site`; sits directly under `eval_data/` |
-| *(next)* | a better-lit room in the house | — | same grid, same 8 medications |
+| `family_room` | grey folding table, rug behind the far mark | Oct 19, 2026 | 4 cells (midday ±lamp, evening-dim ±lamp) + 1 pilot; caveats in `docs/eval/site_notes.md` |
+
+Each site's caveats — a confounded cell, a condition skipped on purpose — go in
+`docs/eval/site_notes.md`; `eval_stats.py` copies that file into the top of its report.
 
 Site labels are lowercase snake_case, chosen once and never renamed: the label is the
 directory name, the manifest column, and the key every statistic is grouped by.

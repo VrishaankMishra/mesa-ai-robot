@@ -101,6 +101,27 @@ def configure_capture(cap, cfg: dict, cv2_module=None) -> dict[str, Any]:
     return applied
 
 
+def restore_auto(cap, cv2_module=None) -> dict[str, Any]:
+    """Put exposure, white balance and focus back on auto.
+
+    UVC controls persist in the camera after the process that set them exits, so a
+    one-off lock (``site_check.py``'s LOCKED pass) silently becomes the state every
+    later capture inherits. Oct 19, 2026: an evaluation session ran at a frozen
+    exposure chosen minutes earlier at a different resolution and read median grey 215
+    where the room measured 123. Call this before releasing a capture you locked.
+    """
+    if cv2_module is None:  # pragma: no cover - import guard for laptop tests
+        import cv2 as cv2_module
+    restored: dict[str, Any] = {}
+    for name, value in (("CAP_PROP_AUTO_EXPOSURE", AUTO_EXPOSURE_AUTO),
+                        ("CAP_PROP_AUTO_WB", 1.0),
+                        ("CAP_PROP_AUTOFOCUS", 1.0)):
+        prop = _prop(cv2_module, name)
+        if _set(cap, prop, value):
+            restored[name] = cap.get(prop)
+    return restored
+
+
 def disable_dynamic_framerate(device: str = "/dev/video0") -> bool:
     """Turn off ``exposure_dynamic_framerate`` (V4L2 only; no OpenCV property exists).
 
