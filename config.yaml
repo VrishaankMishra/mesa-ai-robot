@@ -24,6 +24,8 @@ vision:
 detection:
   model_path: models/best.pt
   confidence_threshold: 0.45    # below this, a bottle is flagged "unknown / wrong medication" (0.5->0.45 after Aug 7 live tuning: morning light runs ~0.1 below the evening training domain)
+  unknown_debounce_seconds: 3   # an unknown box must stay in view this long before "wrong medication" fires (a hand passing over a bottle is shorter)
+  unknown_repeat_seconds: 30    # while the unknown bottle stays, repeat the spoken line at most this often
 
 pose:
   min_fps: 5

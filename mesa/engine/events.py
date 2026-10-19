@@ -14,6 +14,7 @@ from typing import Any
 BOTTLE_OBSERVATION = "bottle_observation"  # payload: {med_name, present}
 POSTURE = "posture"                        # payload: {posture: Posture}
 PRESENCE_CHECK = "presence_check"          # payload: {person_present: bool}
+UNKNOWN_MEDICATION = "unknown_medication"  # payload: {count, confidence} — unrecognised bottle in view
 ACKNOWLEDGE = "acknowledge"                # user responded to a check-in
 HELP_REQUEST = "help_request"              # voice HELP intent
 SHUTDOWN = "__shutdown__"                  # sentinel to stop the consumer loop

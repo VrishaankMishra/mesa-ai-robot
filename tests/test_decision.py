@@ -12,6 +12,7 @@ from mesa.engine.events import (
     HELP_REQUEST,
     POSTURE,
     SHUTDOWN,
+    UNKNOWN_MEDICATION,
     Event,
     EventBus,
 )
@@ -40,6 +41,32 @@ def test_bottle_observation_logs_taken(engine):
     engine.process_event(Event(BOTTLE_OBSERVATION, {"med_name": "tylenol", "present": True}, ts=15))
     engine.process_event(Event(BOTTLE_OBSERVATION, {"med_name": "tylenol", "present": True}, ts=16))
     assert len(engine.db.get_events(types=["taken"])) == 1
+
+
+def test_unknown_medication_logs_wrong_medication_row_and_speaks():
+    from mesa.engine.decision import WRONG_MEDICATION_LINE
+
+    db = Database(":memory:")
+    spoken = []
+    eng = DecisionEngine(
+        db, ComplianceTracker(db), EscalationMachine(db=db), speak=spoken.append,
+    )
+    eng.process_event(Event(UNKNOWN_MEDICATION, {"count": 1, "confidence": 0.31}, ts=42))
+    rows = db.get_events(types=["wrong_medication"])
+    assert len(rows) == 1
+    assert rows[0]["ts"] == 42
+    assert rows[0]["med_name"] is None
+    assert "conf 0.31" in rows[0]["detail"]
+    assert spoken == [WRONG_MEDICATION_LINE]
+    # Not an emergency: escalation stays idle.
+    assert eng.escalation.level == EscalationLevel.IDLE
+    db.close()
+
+
+def test_unknown_medication_event_without_confidence_still_logs(engine):
+    engine.process_event(Event(UNKNOWN_MEDICATION, {}, ts=0))
+    rows = engine.db.get_events(types=["wrong_medication"])
+    assert len(rows) == 1 and rows[0]["detail"] == "1 unrecognised bottle"
 
 
 def test_sustained_lying_triggers_escalation(engine):

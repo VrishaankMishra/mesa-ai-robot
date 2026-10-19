@@ -8,6 +8,9 @@ Owns the camera and publishes onto the :class:`~mesa.engine.events.EventBus`:
   model file exists, so the posture/FALL path works before MED training is done.
 - ``PRESENCE_CHECK`` at ~1 Hz — whether a person (any pose landmarks) is in frame,
   feeding the inactivity monitor.
+- ``UNKNOWN_MEDICATION`` — an "unknown"-label box has sat in view, not overlapping any
+  known bottle, for ``detection.unknown_debounce_seconds``; repeated at most once per
+  ``detection.unknown_repeat_seconds`` while it stays (the "wrong medication" path).
 
 The camera/MediaPipe loop is hardware-bound glue (not unit-tested, same convention as
 ``scripts/pose_live.py``); the detection→presence mapping is a pure function with tests.
@@ -23,6 +26,7 @@ from mesa.engine.events import (
     BOTTLE_OBSERVATION,
     POSTURE,
     PRESENCE_CHECK,
+    UNKNOWN_MEDICATION,
     Event,
     EventBus,
 )
@@ -40,6 +44,62 @@ def presence_map(detections: list[Detection], known_meds: set[str]) -> dict[str,
     """
     seen = {d.label for d in detections if not d.is_unknown}
     return {med: (med in seen) for med in known_meds}
+
+
+def _iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
+    ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+    ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+    inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+    if inter == 0:
+        return 0.0
+    area_a = (a[2] - a[0]) * (a[3] - a[1])
+    area_b = (b[2] - b[0]) * (b[3] - b[1])
+    return inter / float(area_a + area_b - inter)
+
+
+def unknown_boxes(detections: list[Detection], iou_threshold: float = 0.5) -> list[Detection]:
+    """Unknown-label boxes that are not just a second reading of a known bottle.
+
+    YOLO's class-aware NMS can return two boxes for one bottle — the right class above
+    threshold plus a weaker guess that gets labelled "unknown". An unknown box that
+    overlaps a known detection (IoU >= ``iou_threshold``) is that case, not a foreign
+    bottle, so it is dropped. What remains is evidence of a bottle MeSA does not know.
+    """
+    known = [d for d in detections if not d.is_unknown]
+    return [
+        d for d in detections
+        if d.is_unknown and not any(_iou(d.box, k.box) >= iou_threshold for k in known)
+    ]
+
+
+class UnknownBottleGate:
+    """Debounce + rate-limit for the "wrong medication" announcement.
+
+    Pure with respect to time (the caller passes ``now``), like :class:`BottleTracker`.
+    :meth:`update` returns True when an ``UNKNOWN_MEDICATION`` event should be published:
+    an unknown box has been seen continuously for ``debounce_seconds`` (a hand passing
+    over a bottle flickers for less than that and resets the clock), and nothing has been
+    announced in the last ``repeat_seconds``.
+    """
+
+    def __init__(self, debounce_seconds: float = 3.0, repeat_seconds: float = 30.0):
+        self.debounce_seconds = debounce_seconds
+        self.repeat_seconds = repeat_seconds
+        self._unknown_since: float | None = None
+        self._last_fired: float | None = None
+
+    def update(self, unknown_seen: bool, now: float) -> bool:
+        if not unknown_seen:
+            self._unknown_since = None
+            return False
+        if self._unknown_since is None:
+            self._unknown_since = now
+        if now - self._unknown_since < self.debounce_seconds:
+            return False
+        if self._last_fired is not None and now - self._last_fired < self.repeat_seconds:
+            return False
+        self._last_fired = now
+        return True
 
 
 class VisionWorker(threading.Thread):
@@ -65,6 +125,10 @@ class VisionWorker(threading.Thread):
         self.frame_height = get(cfg, "vision.frame_height", 480)
         self.detect_every = max(1, get(cfg, "vision.detection_every_n_frames", 3))
         self.presence_interval = get(cfg, "vision.presence_check_seconds", 1.0)
+        self.unknown_gate = UnknownBottleGate(
+            debounce_seconds=get(cfg, "detection.unknown_debounce_seconds", 3.0),
+            repeat_seconds=get(cfg, "detection.unknown_repeat_seconds", 30.0),
+        )
 
     def stop(self) -> None:
         self._stop.set()
@@ -138,6 +202,14 @@ class VisionWorker(threading.Thread):
                         self.bus.publish(
                             Event(BOTTLE_OBSERVATION,
                                   {"med_name": med, "present": present}, ts=now)
+                        )
+                    unknowns = unknown_boxes(detections)
+                    if self.unknown_gate.update(bool(unknowns), now):
+                        self.bus.publish(
+                            Event(UNKNOWN_MEDICATION,
+                                  {"count": len(unknowns),
+                                   "confidence": max(d.confidence for d in unknowns)},
+                                  ts=now)
                         )
         finally:
             cap.release()

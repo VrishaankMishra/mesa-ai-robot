@@ -16,6 +16,7 @@ decision logic can be exercised on any laptop with no camera or mic.
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from mesa import __version__
@@ -262,6 +263,12 @@ def main() -> None:
     p.add_argument("--live", action="store_true", help="start camera/mic workers")
     p.add_argument("--echo", action="store_true", help="print speech instead of TTS")
     args = p.parse_args()
+
+    if args.live:
+        # Operators run `main.py --live 2>&1 | tee log`; with a pipe, stdout is
+        # block-buffered and the `[live]` / `[MeSA]` lines only appear at exit.
+        # Line-buffer it so the log is live without needing `python -u`.
+        sys.stdout.reconfigure(line_buffering=True)
 
     cfg = load_config()
     print(f"MeSA {__version__} — orchestrator ready.")
