@@ -13,8 +13,7 @@ room=${1:?usage: $0 <room> <condition>}
 cond=${2:?usage: $0 <room> <condition>}
 shift 2
 
-conditions="morning_lamps_off morning_lamps_on midday_lamps_off midday_lamp_added
-evening_lights_on evening_lamp_added evening_dim evening_dim_lamp"
+conditions="morning_lamps_off morning_lamps_on midday_lamps_off midday_lamp_added evening_lights_on evening_lamp_added evening_dim evening_dim_lamp"
 case " $conditions " in
   *" $cond "*) ;;
   *) echo "unknown condition '$cond'. One of:"; printf '  %s\n' $conditions; exit 2 ;;

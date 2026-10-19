@@ -47,6 +47,27 @@ def say(text: str) -> None:
     subprocess.run(["espeak-ng", "-s", "160", text], check=False)
 
 
+def camera_controls(device: str = "/dev/video0") -> dict:
+    """What auto-exposure had to do: gain, exposure time, mode. Empty without v4l2-ctl.
+
+    Median grey of an auto-exposed frame says only that the camera coped; a dim room at
+    gain 255 can read brighter than a sunlit one. The controls are the illumination
+    measurement (Oct 19, 2026: family room at dusk read median 134 at gain 255/255).
+    """
+    try:
+        out = subprocess.run(
+            ["v4l2-ctl", "-d", device, "--get-ctrl=auto_exposure,exposure_time_absolute,gain"],
+            capture_output=True, text=True, timeout=5).stdout
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return {}
+    vals = {}
+    for line in out.splitlines():
+        if ":" in line:
+            k, v = line.split(":", 1)
+            vals[k.strip()] = v.strip().split()[0] if v.strip() else ""
+    return {k: (int(v) if v.isdigit() else v) for k, v in vals.items()}
+
+
 def grab(cap, flush: int = 4):
     frame = None
     for _ in range(flush):
@@ -100,10 +121,14 @@ def main() -> int:
                  "median_gray": float(np.median(gray)),
                  "blown_pct": 100.0 * float((gray > 250).mean()),
                  "dark_pct": 100.0 * float((gray < 20).mean()),
-                 "captured_at": datetime.now().isoformat(timespec="seconds")}
+                 "captured_at": datetime.now().isoformat(timespec="seconds"),
+                 "camera": camera_controls(f"/dev/video{args.camera}")}
         (out_dir / "scene.json").write_text(json.dumps(scene, indent=2) + "\n")
+        cam = scene["camera"]
         print(f"scene: median gray {scene['median_gray']:.0f}  "
-              f"blown {scene['blown_pct']:.1f}%  dark {scene['dark_pct']:.1f}%", flush=True)
+              f"blown {scene['blown_pct']:.1f}%  dark {scene['dark_pct']:.1f}%  "
+              f"gain {cam.get('gain', '?')}  exposure {cam.get('exposure_time_absolute', '?')}",
+              flush=True)
         say(f"Scene brightness {scene['median_gray']:.0f}.")
 
     manifest_path = out_dir / "manifest.csv"
