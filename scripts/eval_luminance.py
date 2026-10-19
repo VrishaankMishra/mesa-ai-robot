@@ -26,7 +26,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_analyze import DEFAULT_SITE, find_manifests, site_for  # noqa: E402
 
-FIELDS = ["site", "condition", "session", "median_gray", "blown_pct", "dark_pct", "source"]
+FIELDS = ["site", "condition", "session", "median_gray", "blown_pct", "dark_pct",
+          "gain", "exposure_time_absolute", "source"]
 
 
 def gray_stats(grays) -> dict:
@@ -86,11 +87,14 @@ def main() -> int:
             scene.update(site=site if site != args.default_site else "",
                          condition=rows[0]["condition"], session=rows[0]["session"])
             scene_path.write_text(json.dumps(scene, indent=2) + "\n")
+        cam = scene.get("camera") or {}  # gain/exposure exist only for sessions since Oct 19
         out_rows.append({"site": site, "condition": rows[0]["condition"],
                          "session": rows[0]["session"],
                          "median_gray": f"{scene['median_gray']:.1f}",
                          "blown_pct": f"{scene['blown_pct']:.2f}",
                          "dark_pct": f"{scene['dark_pct']:.2f}",
+                         "gain": cam.get("gain", ""),
+                         "exposure_time_absolute": cam.get("exposure_time_absolute", ""),
                          "source": scene["source"]})
         print(f"{site:14s} {rows[0]['condition']:20s} gray {scene['median_gray']:5.1f}  "
               f"blown {scene['blown_pct']:5.2f}%  ({scene['source']})")

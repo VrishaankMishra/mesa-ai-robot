@@ -432,9 +432,14 @@ def replication_section(cells: Cells, ref: str, site: str, lum: dict) -> list[st
     return out + [""]
 
 
-def build_report(cells: Cells, model: str, ref: str, lum: dict, sources: list[str]) -> str:
+def build_report(cells: Cells, model: str, ref: str, lum: dict, sources: list[str],
+                 notes: str = "") -> str:
     sites = sites_in(cells)
     out = ["# Domain-shift statistics pass", ""]
+    if notes.strip():
+        # Caveats the numbers cannot carry themselves (a confounded cell, a skipped
+        # condition) live in a hand-written file so they survive every regeneration.
+        out += ["## Notes on the data", "", notes.strip(), ""]
     out.append(f"Model arm `{model}`; sources: " + ", ".join(f"`{s}`" for s in sources) +
                f"; sites: " + ", ".join(f"`{s}`" for s in sites) + f" (reference `{ref}`).")
     out.append("")
@@ -462,6 +467,8 @@ def main() -> int:
     p.add_argument("--luminance", default="docs/eval/scene_luminance.csv",
                    help="CSV from eval_luminance.py (optional; enables the trend test)")
     p.add_argument("--out", default="docs/eval/site_stats.md")
+    p.add_argument("--notes", default="docs/eval/site_notes.md",
+                   help="markdown caveats copied into the report verbatim (optional)")
     args = p.parse_args()
 
     paths = [Path(r) for r in args.results]
@@ -470,7 +477,8 @@ def main() -> int:
         print(f"no rows for model {args.model!r} in {args.results}")
         return 1
     lum = load_luminance(Path(args.luminance), args.reference_site)
-    report = build_report(cells, args.model, args.reference_site, lum, args.results)
+    notes = Path(args.notes).read_text() if Path(args.notes).exists() else ""
+    report = build_report(cells, args.model, args.reference_site, lum, args.results, notes)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(report)
