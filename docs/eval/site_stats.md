@@ -7,23 +7,29 @@ survive regeneration. Numbers are in the tables; this file says which of them to
 
 **`home_office`** (Aug 8–9, 2026): the paper's grid. Per-session luminance was recomputed
 after the fact from whole frames (`source=retro_frame00`); camera gain/exposure were not
-recorded then.
+recorded then. `evening_dim` there was captured at 21:11 with only computer screens lit.
 
-**`family_room`** (Oct 19, 2026): grey folding table, patterned rug behind the far mark,
-window to the camera's left; LED lamp base taped at the table's near-left. Camera on auto
-throughout (gain/exposure in `scene_luminance.csv`). Conditions and their standing:
+**`family_room`** (Oct 19 and 22, 2026): grey folding table, patterned rug behind the far
+mark, window to the camera's left; LED lamp base taped at the table's near-left. Camera on
+auto throughout (gain/exposure in `scene_luminance.csv`). Conditions and their standing:
 
-- `midday_lamps_off` — clean at the far mark. The near mark sits at the bottom edge of the
-  frame in this geometry, so near-mark cells vary with centimetres of placement; compare
-  sites on the far mark (`mark_m = 0.8`) or pooled, not near alone.
-- `midday_lamp_added` — not a clean lamp ablation: the lamp base was off the table in this
-  session and on it in the previous one, and the near-mark edge effect dominates the delta.
-- `evening_dim` — clean. This room's dim is the camera at gain 255 / exposure 665 holding
-  the image up (median grey 135); site A's dim was below the camera's range (median 39).
-- `evening_dim_lamp` — **confounded, do not quote**: the far-mark bottle was placed at the
-  table's far edge, ~30% smaller in frame than in `evening_dim`, and the lamp head's aim was
-  not recorded. The cell scored 10% (deployed arm); a redo with the bottle on the tape and
-  the lamp aimed across at the label faces is planned.
+- `midday_lamps_off` (Oct 19, 14:12) — clean at the far mark. The near mark sits at the
+  bottom edge of the frame in this geometry, so near-mark cells vary with centimetres of
+  placement; compare sites on the far mark (`mark_m = 0.8`) or pooled, not near alone.
+- `midday_lamp_added` (Oct 19, 14:24) — not a clean lamp ablation: the lamp base was off
+  the table in this session and on it in the previous one, and the near-mark edge effect
+  dominates the delta.
+- `afternoon_blinds_dim` (Oct 19, 14:58) — an extra condition this site has and site A
+  does not: mid-afternoon, blinds closed, ceiling lights off. The camera was at gain 255 /
+  exposure 665 holding the image up (median grey 135), so it is dim by the instrument but
+  it is not an evening cell. It was captured and first reported under the label
+  `evening_dim`; renamed Oct 22.
+- `afternoon_blinds_dim_lamp` (Oct 19, 15:08) — **confounded, do not quote**: the far-mark
+  bottle was placed at the table's far edge, ~30% smaller in frame than in the paired cell,
+  and the lamp head's aim was not recorded. 10% under the deployed arm.
+- `evening_dim` / `evening_dim_lamp` (Oct 22, after sunset) — the true evening pair,
+  comparable to site A's; bottle on the tape, lamp head aimed across at the label faces
+  from beside the camera. See the tables.
 - `midday_lamps_off_pilot_steep_manualexp` — pilot, excluded from the grid: camera tilted
   steeper than the reference *and* left in manual exposure (312) by a prior `site_check`
   run (median grey 215 vs 123 for the room). Kept because it shows the geometry failure
@@ -129,8 +135,8 @@ Lamp on minus lamp off at the same time of day, in percentage points, Newcombe 9
 |---|---|---|---|---|---|---|---|---|---|
 | midday_lamps_off | 73 [52–87] | 50 [31–69] | 0 [0–15] | 100 [85–100] | 5 [1–22] | 100 [85–100] | 77 [57–90] | 91 [72–97] | **62 [55–69]** |
 | midday_lamp_added | 50 [31–69] | 36 [20–57] | 0 [0–15] | 59 [39–77] | 45 [27–65] | 91 [72–97] | 41 [23–61] | 55 [35–73] | **47 [40–55]** |
-| evening_dim | 73 [52–87] | 100 [85–100] | 0 [0–15] | 100 [85–100] | 86 [67–95] | 100 [85–100] | 77 [57–90] | 91 [72–97] | **78 [72–84]** |
-| evening_dim_lamp | 5 [1–22] | 23 [10–43] | 0 [0–15] | 0 [0–15] | 14 [5–33] | 18 [7–39] | 23 [10–43] | 0 [0–15] | **10 [7–16]** |
+| afternoon_blinds_dim | 73 [52–87] | 100 [85–100] | 0 [0–15] | 100 [85–100] | 86 [67–95] | 100 [85–100] | 77 [57–90] | 91 [72–97] | **78 [72–84]** |
+| afternoon_blinds_dim_lamp | 5 [1–22] | 23 [10–43] | 0 [0–15] | 0 [0–15] | 14 [5–33] | 18 [7–39] | 23 [10–43] | 0 [0–15] | **10 [7–16]** |
 | midday_lamps_off_pilot_steep_manualexp | 50 [31–69] | 14 [5–33] | 0 [0–15] | 100 [85–100] | 86 [67–95] | 100 [85–100] | 55 [35–73] | 95 [78–99] | **62 [55–69]** |
 
 ### Unknown probe and group scene (`family_room`)
@@ -139,8 +145,8 @@ Lamp on minus lamp off at the same time of day, in percentage points, Newcombe 9
 |---|---|---|---|---|
 | midday_lamps_off | 123 | 0.2 | 55 [28–79] (n=11) | 0 [0–26] (n=11) |
 | midday_lamp_added | 85 | 0.0 | 73 [43–90] (n=11) | 0 [0–26] (n=11) |
-| evening_dim | 135 | 0.0 | 55 [28–79] (n=11) | 0 [0–26] (n=11) |
-| evening_dim_lamp | 59 | 0.0 | 100 [74–100] (n=11) | 0 [0–26] (n=11) |
+| afternoon_blinds_dim | 135 | 0.0 | 55 [28–79] (n=11) | 0 [0–26] (n=11) |
+| afternoon_blinds_dim_lamp | 59 | 0.0 | 100 [74–100] (n=11) | 0 [0–26] (n=11) |
 | midday_lamps_off_pilot_steep_manualexp | 215 | 2.3 | 27 [10–57] (n=11) | 0 [0–26] (n=11) |
 
 ### Lighting trend (`family_room`)
@@ -169,7 +175,7 @@ Lamp on minus lamp off at the same time of day, in percentage points, Newcombe 9
 | advil | 91 [72–97] | 55 [35–73] | -36 [-57, -10] \* |
 | **pooled** | 62 [55–69] | 47 [40–55] | **-15 [-25, -4] \*** |
 
-**evening dim** — `evening_dim` → `evening_dim_lamp`; sign test 0 up / 7 down / 1 unchanged, p = 0.016
+**afternoon, blinds closed** — `afternoon_blinds_dim` → `afternoon_blinds_dim_lamp`; sign test 0 up / 7 down / 1 unchanged, p = 0.016
 
 | medication | lamp off | lamp on | Δ pp |
 |---|---|---|---|
@@ -191,16 +197,13 @@ Cell-for-cell difference (`family_room` minus `home_office`) in percentage point
 |---|---|---|---|---|---|---|---|---|---|
 | midday_lamps_off | -27 [-48, -7] \* | -50 [-69, -26] \* | -59 [-77, -34] \* | +0 [-15, +15] | -95 [-99, -73] \* | +0 [-15, +15] | -23 [-43, -3] \* | -9 [-28, +7] | **-33 [-41, -25] \*** |
 | midday_lamp_added | -50 [-69, -26] \* | -64 [-80, -38] \* | -73 [-87, -47] \* | -41 [-61, -18] \* | -55 [-73, -30] \* | -9 [-28, +7] | -59 [-77, -34] \* | -45 [-65, -22] \* | **-49 [-57, -41] \*** |
-| evening_dim | -5 [-29, +21] | +59 [+34, +77] \* | -5 [-22, +11] | +0 [-15, +15] | -14 [-33, +4] | +9 [-7, +28] | +14 [-13, +38] | +50 [+22, +69] \* | **+14 [+4, +23] \*** |
-| evening_dim_lamp | -95 [-99, -73] \* | -73 [-86, -46] \* | -27 [-48, -7] \* | -100 [-100, -79] \* | -68 [-82, -40] \* | -82 [-93, -57] \* | -73 [-86, -46] \* | -100 [-100, -79] \* | **-77 [-83, -69] \*** |
 
 ### Summary
 
-- Cells compared: 32; cells whose difference interval excludes zero: 22 — midday_lamps_off/mylanta (-27), midday_lamps_off/vitamin_d3 (-50), midday_lamps_off/bayer_aspirin (-59), midday_lamps_off/omeprazole (-95), midday_lamps_off/ashwagandha (-23), midday_lamp_added/mylanta (-50), midday_lamp_added/vitamin_d3 (-64), midday_lamp_added/bayer_aspirin (-73), midday_lamp_added/cvs_allergy (-41), midday_lamp_added/omeprazole (-55), midday_lamp_added/ashwagandha (-59), midday_lamp_added/advil (-45), evening_dim/vitamin_d3 (+59), evening_dim/advil (+50), evening_dim_lamp/mylanta (-95), evening_dim_lamp/vitamin_d3 (-73), evening_dim_lamp/bayer_aspirin (-27), evening_dim_lamp/cvs_allergy (-100), evening_dim_lamp/omeprazole (-68), evening_dim_lamp/melatonin (-82), evening_dim_lamp/ashwagandha (-73), evening_dim_lamp/advil (-100).
-- Condition profile agreement (Spearman ρ over 4 pooled condition rates): -0.40.
-- `home_office`: worst condition `evening_dim` 65 [57–71], best `midday_lamp_added` 97 [93–98].
-- `family_room`: worst condition `evening_dim_lamp` 10 [7–16], best `evening_dim` 78 [72–84].
+- Cells compared: 16; cells whose difference interval excludes zero: 12 — midday_lamps_off/mylanta (-27), midday_lamps_off/vitamin_d3 (-50), midday_lamps_off/bayer_aspirin (-59), midday_lamps_off/omeprazole (-95), midday_lamps_off/ashwagandha (-23), midday_lamp_added/mylanta (-50), midday_lamp_added/vitamin_d3 (-64), midday_lamp_added/bayer_aspirin (-73), midday_lamp_added/cvs_allergy (-41), midday_lamp_added/omeprazole (-55), midday_lamp_added/ashwagandha (-59), midday_lamp_added/advil (-45).
+- Condition profile agreement: not computable.
+- `home_office`: worst condition `midday_lamps_off` 95 [91–97], best `midday_lamp_added` 97 [93–98].
+- `family_room`: worst condition `midday_lamp_added` 47 [40–55], best `midday_lamps_off` 62 [55–69].
 - Lamp lift, midday: `home_office` +2 [-3, +6]; `family_room` -15 [-25, -4] \*.
-- Lamp lift, evening dim: `home_office` +23 [+14, +31] \*; `family_room` -68 [-75, -60] \*.
-- `home_office` probe rejection, darkest (`evening_dim`) 100 [74–100] vs brightest (`midday_lamps_off`) 18 [5–48].
-- `family_room` probe rejection, darkest (`evening_dim_lamp`) 100 [74–100] vs brightest (`evening_dim`) 55 [28–79].
+- `home_office` probe rejection, darkest (`midday_lamp_added`) 18 [5–48] vs brightest (`midday_lamps_off`) 18 [5–48].
+- `family_room` probe rejection, darkest (`midday_lamp_added`) 73 [43–90] vs brightest (`midday_lamps_off`) 55 [28–79].

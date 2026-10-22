@@ -43,6 +43,7 @@ NAN = float("nan")
 CONDITION_ORDER = [
     "morning_lamps_off", "morning_lamps_on",
     "midday_lamps_off", "midday_lamp_added",
+    "afternoon_blinds_dim", "afternoon_blinds_dim_lamp",   # family_room extra, Oct 19
     "evening_lights_on", "evening_lamp_added",
     "evening_dim", "evening_dim_lamp",
 ]
@@ -51,6 +52,7 @@ MEDS_ORDER = ["mylanta", "vitamin_d3", "bayer_aspirin", "cvs_allergy",
 # (lamp off, lamp on, label): same time of day, only the lamp differs.
 LAMP_PAIRS = [
     ("midday_lamps_off", "midday_lamp_added", "midday"),
+    ("afternoon_blinds_dim", "afternoon_blinds_dim_lamp", "afternoon, blinds closed"),
     ("evening_lights_on", "evening_lamp_added", "evening, lights on"),
     ("evening_dim", "evening_dim_lamp", "evening dim"),
 ]

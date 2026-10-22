@@ -3,23 +3,29 @@ survive regeneration. Numbers are in the tables; this file says which of them to
 
 **`home_office`** (Aug 8–9, 2026): the paper's grid. Per-session luminance was recomputed
 after the fact from whole frames (`source=retro_frame00`); camera gain/exposure were not
-recorded then.
+recorded then. `evening_dim` there was captured at 21:11 with only computer screens lit.
 
-**`family_room`** (Oct 19, 2026): grey folding table, patterned rug behind the far mark,
-window to the camera's left; LED lamp base taped at the table's near-left. Camera on auto
-throughout (gain/exposure in `scene_luminance.csv`). Conditions and their standing:
+**`family_room`** (Oct 19 and 22, 2026): grey folding table, patterned rug behind the far
+mark, window to the camera's left; LED lamp base taped at the table's near-left. Camera on
+auto throughout (gain/exposure in `scene_luminance.csv`). Conditions and their standing:
 
-- `midday_lamps_off` — clean at the far mark. The near mark sits at the bottom edge of the
-  frame in this geometry, so near-mark cells vary with centimetres of placement; compare
-  sites on the far mark (`mark_m = 0.8`) or pooled, not near alone.
-- `midday_lamp_added` — not a clean lamp ablation: the lamp base was off the table in this
-  session and on it in the previous one, and the near-mark edge effect dominates the delta.
-- `evening_dim` — clean. This room's dim is the camera at gain 255 / exposure 665 holding
-  the image up (median grey 135); site A's dim was below the camera's range (median 39).
-- `evening_dim_lamp` — **confounded, do not quote**: the far-mark bottle was placed at the
-  table's far edge, ~30% smaller in frame than in `evening_dim`, and the lamp head's aim was
-  not recorded. The cell scored 10% (deployed arm); a redo with the bottle on the tape and
-  the lamp aimed across at the label faces is planned.
+- `midday_lamps_off` (Oct 19, 14:12) — clean at the far mark. The near mark sits at the
+  bottom edge of the frame in this geometry, so near-mark cells vary with centimetres of
+  placement; compare sites on the far mark (`mark_m = 0.8`) or pooled, not near alone.
+- `midday_lamp_added` (Oct 19, 14:24) — not a clean lamp ablation: the lamp base was off
+  the table in this session and on it in the previous one, and the near-mark edge effect
+  dominates the delta.
+- `afternoon_blinds_dim` (Oct 19, 14:58) — an extra condition this site has and site A
+  does not: mid-afternoon, blinds closed, ceiling lights off. The camera was at gain 255 /
+  exposure 665 holding the image up (median grey 135), so it is dim by the instrument but
+  it is not an evening cell. It was captured and first reported under the label
+  `evening_dim`; renamed Oct 22.
+- `afternoon_blinds_dim_lamp` (Oct 19, 15:08) — **confounded, do not quote**: the far-mark
+  bottle was placed at the table's far edge, ~30% smaller in frame than in the paired cell,
+  and the lamp head's aim was not recorded. 10% under the deployed arm.
+- `evening_dim` / `evening_dim_lamp` (Oct 22, after sunset) — the true evening pair,
+  comparable to site A's; bottle on the tape, lamp head aimed across at the label faces
+  from beside the camera. See the tables.
 - `midday_lamps_off_pilot_steep_manualexp` — pilot, excluded from the grid: camera tilted
   steeper than the reference *and* left in manual exposure (312) by a prior `site_check`
   run (median grey 215 vs 123 for the room). Kept because it shows the geometry failure

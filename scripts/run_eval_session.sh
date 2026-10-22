@@ -22,6 +22,15 @@ if [[ ! "$room" =~ ^[a-z][a-z0-9_]*$ ]]; then
   echo "room label must be lowercase snake_case (got '$room')"; exit 2
 fi
 
+# A session runs on timers whether or not the operator can hear the prompts: on Oct 19,
+# 2026 the USB speakerphone had dropped off the bus and 60 frames were captured in
+# silence with nothing on the table. Refuse unless a USB audio output is present.
+if ! aplay -l 2>/dev/null | grep -q "USB Audio"; then
+  echo "no USB speakerphone found (aplay -l shows no 'USB Audio' card) — reseat it, or"
+  echo "set MESA_ALLOW_SILENT=1 to run anyway"
+  [ "${MESA_ALLOW_SILENT:-0}" = 1 ] || exit 3
+fi
+
 exec .venv/bin/python -u scripts/eval_capture.py \
     --site "$room" --condition "$cond" \
     --bottles mylanta,vitamin_d3,bayer_aspirin,cvs_allergy,omeprazole,melatonin,ashwagandha,advil \
