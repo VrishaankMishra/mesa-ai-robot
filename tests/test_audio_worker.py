@@ -1,6 +1,7 @@
 """Tests for AudioWorker.handle_transcript (ENG-004) — no microphone required."""
 
 from mesa.audio.assistant import VoiceAssistant
+from mesa.audio.ptt import NullTrigger
 from mesa.audio.worker import AudioWorker
 from mesa.data.database import Database
 from mesa.engine.events import ACKNOWLEDGE, HELP_REQUEST, EventBus
@@ -65,3 +66,26 @@ def test_unrecognized_command_does_not_acknowledge():
     worker.handle_transcript("mesa purple monkey dishwasher", now=3.0)
     assert drain(bus) == []  # gibberish is not proof of responsiveness
     assert spoken  # still answered "didn't catch that"
+
+
+def test_check_in_window_stays_silent_on_unrecognised_sound_then_hears_okay():
+    # The speakerphone's own "Are you okay?" returns through its mic as "[unk]". A spoken
+    # retry would be heard the same way and the loop would burn the whole window.
+    spoken = []
+    worker, bus = make_worker(spoken)
+    worker.trigger = NullTrigger()  # push-to-talk mode
+    worker.open_check_in(now=0.0)
+    assert worker.handle_transcript("[unk]", now=1.0)
+    assert spoken == []                       # no retry line inside a check-in window
+    assert worker.window.is_open(2.0)         # and the window is still open
+    worker.handle_transcript("i am okay", now=2.0)
+    assert [e.type for e in drain(bus)] == [ACKNOWLEDGE]
+
+
+def test_button_window_still_gets_the_retry_line():
+    spoken = []
+    worker, bus = make_worker(spoken)
+    worker.trigger = NullTrigger()  # push-to-talk mode
+    worker.open_window(now=0.0)
+    worker.handle_transcript("[unk]", now=1.0)
+    assert spoken and "didn't catch" in spoken[0]
