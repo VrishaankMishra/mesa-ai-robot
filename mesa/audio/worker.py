@@ -195,7 +195,12 @@ class AudioWorker(threading.Thread):
         if not text.strip() or text.strip().lower() == UNK_TOKEN:
             # Grammar-constrained recognizer heard something it has no words for.
             self._retry_if_sticky(now, sticky_until)
-            self.speak("Sorry, I didn't catch that. Please say it again.")
+            if sticky_until is None:
+                self.speak("Sorry, I didn't catch that. Please say it again.")
+            # In a check-in window, stay quiet. The speakerphone's own prompt comes back
+            # through its microphone as "[unk]", and a spoken retry is heard the same
+            # way: each reply re-triggers this branch until the window is gone and the
+            # real "I am okay" lands on a closed door (Oct 24, 2026, family room).
             return True
 
         parsed = parse_intent(text)

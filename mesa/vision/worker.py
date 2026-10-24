@@ -57,18 +57,38 @@ def _iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
     return inter / float(area_a + area_b - inter)
 
 
-def unknown_boxes(detections: list[Detection], iou_threshold: float = 0.5) -> list[Detection]:
+def unknown_boxes(detections: list[Detection], iou_threshold: float = 0.5,
+                  min_confidence: float = 0.0,
+                  roi: tuple[int, int, int, int] | None = None) -> list[Detection]:
     """Unknown-label boxes that are not just a second reading of a known bottle.
 
     YOLO's class-aware NMS can return two boxes for one bottle — the right class above
     threshold plus a weaker guess that gets labelled "unknown". An unknown box that
     overlaps a known detection (IoU >= ``iou_threshold``) is that case, not a foreign
     bottle, so it is dropped. What remains is evidence of a bottle MeSA does not know.
+
+    ``min_confidence`` drops the detector's floor-level guesses: it predicts at
+    confidence 0 so that a real foreign bottle surfaces as a weak box, but in a room
+    with a patterned rug, a lamp base and chair legs in frame those guesses never stop
+    (Oct 24, 2026: 0.08–0.24 boxes fired "wrong medication" every 30 s for nine minutes
+    with nothing foreign on the table).
+
+    ``roi`` (x1, y1, x2, y2, pixels) is the table: an unknown box whose centre lies
+    outside it is furniture, not a bottle. A foreign bottle's own boxes sit in the same
+    0.10–0.24 band as the rug's, so no confidence floor separates them; *where* does.
     """
     known = [d for d in detections if not d.is_unknown]
+
+    def on_table(box) -> bool:
+        if roi is None:
+            return True
+        cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+        return roi[0] <= cx <= roi[2] and roi[1] <= cy <= roi[3]
+
     return [
         d for d in detections
-        if d.is_unknown and not any(_iou(d.box, k.box) >= iou_threshold for k in known)
+        if d.is_unknown and d.confidence >= min_confidence and on_table(d.box)
+        and not any(_iou(d.box, k.box) >= iou_threshold for k in known)
     ]
 
 
@@ -128,6 +148,14 @@ class VisionWorker(threading.Thread):
         self.unknown_gate = UnknownBottleGate(
             debounce_seconds=get(cfg, "detection.unknown_debounce_seconds", 3.0),
             repeat_seconds=get(cfg, "detection.unknown_repeat_seconds", 30.0),
+        )
+        self.unknown_min_confidence = get(cfg, "detection.unknown_min_confidence", 0.0)
+        # detection.table_roi: [x1, y1, x2, y2] as fractions of the frame; null = whole frame.
+        roi = get(cfg, "detection.table_roi", None)
+        self.unknown_roi = (
+            (int(roi[0] * self.frame_width), int(roi[1] * self.frame_height),
+             int(roi[2] * self.frame_width), int(roi[3] * self.frame_height))
+            if roi else None
         )
 
     def stop(self) -> None:
@@ -203,7 +231,9 @@ class VisionWorker(threading.Thread):
                             Event(BOTTLE_OBSERVATION,
                                   {"med_name": med, "present": present}, ts=now)
                         )
-                    unknowns = unknown_boxes(detections)
+                    unknowns = unknown_boxes(detections,
+                                             min_confidence=self.unknown_min_confidence,
+                                             roi=self.unknown_roi)
                     if self.unknown_gate.update(bool(unknowns), now):
                         self.bus.publish(
                             Event(UNKNOWN_MEDICATION,
