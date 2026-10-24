@@ -80,7 +80,10 @@ class ParsedIntent:
 # false-trigger an alert, while any other mention of help still wins over OKAY.
 _HELP = re.compile(r"\b(help|emergency|fall(en)?|i'?ve fallen|call (for help|someone|911))\b")
 _NEGATED_HELP = re.compile(r"\b(?:don'?t|do not|no) need (?:any )?(?:help|anything)\b")
-_OKAY = re.compile(r"\b(i'?m (okay|ok|fine|alright|all right|good)|(yes\s+)?i'?m up|all good|no problem|never mind|i don'?t need (any\s*)?(help|anything))\b")
+# "i am" as well as "i'm": the closed Vosk grammar has no contractions, so the only
+# acknowledgement the recognizer can emit is "i am okay" (Oct 24, 2026 — the check-in
+# could not be cleared by voice until this matched).
+_OKAY = re.compile(r"\b((i'?m|i am) (okay|ok|fine|alright|all right|good)|(yes\s+)?(i'?m|i am) up|all good|no problem|never mind|i (don'?t|do not) need (any\s*)?(help|anything))\b")
 _DID_I_TAKE = re.compile(r"\b(did|have) i (already )?(take|taken|had)\b")
 _NEXT_MED = re.compile(r"\b(next (med|medication|pill|dose)|what.*next|when.*next med)")
 _DATE_TIME = re.compile(r"\b(what.*(time|date|day)|today'?s date|the date|the time)\b")

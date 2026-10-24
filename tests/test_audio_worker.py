@@ -89,3 +89,10 @@ def test_button_window_still_gets_the_retry_line():
     worker.open_window(now=0.0)
     worker.handle_transcript("[unk]", now=1.0)
     assert spoken and "didn't catch" in spoken[0]
+
+
+def test_grammar_wording_of_okay_is_an_acknowledgement():
+    # The closed Vosk grammar emits "i am okay", never "i'm okay".
+    from mesa.audio.intents import Intent, parse_intent
+    for phrase in ("i am okay", "i am fine", "i am all right", "i do not need help"):
+        assert parse_intent(phrase).intent == Intent.OKAY, phrase
