@@ -26,7 +26,12 @@ detection:
   confidence_threshold: 0.45    # below this, a bottle is flagged "unknown / wrong medication" (0.5->0.45 after Aug 7 live tuning: morning light runs ~0.1 below the evening training domain)
   unknown_debounce_seconds: 3   # an unknown box must stay in view this long before "wrong medication" fires (a hand passing over a bottle is shorter)
   unknown_repeat_seconds: 30    # while the unknown bottle stays, repeat the spoken line at most this often
-  unknown_min_confidence: 0.25  # an unknown box below this is detector noise, not a bottle (Oct 24: rug/lamp/chair gave permanent 0.08-0.24 boxes and 18 false "wrong medication" rows in 9 min)
+  unknown_min_confidence: 0.10  # an unknown box below this is detector noise, not a bottle
+  # Only unknown boxes whose centre is on the table count as a foreign bottle. Fractions of
+  # the frame [x1, y1, x2, y2]; null = whole frame. A foreign bottle's boxes (TUMS: 0.10-0.24)
+  # sit in the same confidence band as a patterned rug's (0.08-0.24), so place, not
+  # confidence, separates them (Oct 24, 2026, family-room rig: table in the lower-right).
+  table_roi: [0.25, 0.52, 1.0, 1.0]
 
 pose:
   min_fps: 5

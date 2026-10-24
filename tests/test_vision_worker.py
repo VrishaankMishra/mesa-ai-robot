@@ -68,6 +68,14 @@ def test_min_confidence_defaults_to_zero_keeping_old_behaviour():
     assert unknown_boxes([det("unknown", 0.05)]) == [det("unknown", 0.05)]
 
 
+def test_unknown_box_off_the_table_is_furniture():
+    # Same confidence band as a foreign bottle; only the centre's position differs.
+    on = Detection(label="unknown", confidence=0.2, box=(300, 300, 340, 360))
+    off = Detection(label="unknown", confidence=0.2, box=(50, 50, 90, 110))
+    assert unknown_boxes([on, off], roi=(160, 250, 640, 480)) == [on]
+    assert unknown_boxes([on, off]) == [on, off]   # no roi: old behaviour
+
+
 # --- UnknownBottleGate: debounce + rate limit with simulated time ---
 
 
