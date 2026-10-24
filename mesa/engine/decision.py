@@ -20,12 +20,16 @@ from mesa.engine.events import (
     POSTURE,
     PRESENCE_CHECK,
     SHUTDOWN,
+    UNKNOWN_MEDICATION,
     Event,
     EventBus,
 )
 from mesa.engine.inactivity import InactivityMonitor
 from mesa.hardware.emotions import Emotion
 from mesa.vision.posture import Posture, PostureMonitor
+
+
+WRONG_MEDICATION_LINE = "That bottle isn't one of your medications."
 
 
 class DecisionEngine:
@@ -60,6 +64,17 @@ class DecisionEngine:
             taken = self.compliance.observe(p["med_name"], p["present"], ts)
             if taken is not None and self.on_taken is not None:
                 self.on_taken(taken)
+
+        elif event.type == UNKNOWN_MEDICATION:
+            # The vision worker has already debounced and rate-limited this, so every
+            # event is one announcement: a DB row the dashboard shows, and one spoken line.
+            count = p.get("count", 1)
+            conf = p.get("confidence")
+            detail = f"{count} unrecognised bottle{'s' if count != 1 else ''}"
+            if conf is not None:
+                detail += f" (conf {conf:.2f})"
+            self.db.log_event("wrong_medication", detail=detail, ts=ts)
+            self.speak(WRONG_MEDICATION_LINE)
 
         elif event.type == POSTURE:
             fall = self.posture_monitor.update(p["posture"], ts)
