@@ -1,0 +1,40 @@
+run,time,type,med_name,detail
+1_rehearsal,2026-10-24 16:26:24,taken,melatonin,absent 17s
+1_rehearsal,2026-10-24 16:26:59,taken,advil,absent 158s
+1_rehearsal,2026-10-24 16:27:44,taken,advil,absent 18s
+1_rehearsal,2026-10-24 16:28:19,taken,ashwagandha,absent 238s
+1_rehearsal,2026-10-24 16:29:49,taken,mylanta,absent 328s
+1_rehearsal,2026-10-24 16:30:25,taken,mylanta,absent 11s
+1_rehearsal,2026-10-24 16:30:46,taken,mylanta,absent 16s
+1_rehearsal,2026-10-24 16:33:16,wrong_medication,,1 unrecognised bottle (conf 0.25)
+1_rehearsal,2026-10-24 16:38:07,possible_fall,,lying 30s
+1_rehearsal,2026-10-24 16:38:07,escalation_l1,,possible fall detected
+1_rehearsal,2026-10-24 16:39:07,escalation_l2,,possible fall detected
+1_rehearsal,2026-10-24 16:40:07,escalation_l3,,possible fall detected
+1_rehearsal,2026-10-24 16:52:11,possible_fall,,lying 30s
+1_rehearsal,2026-10-24 16:52:11,escalation_l1,,possible fall detected
+1_rehearsal,2026-10-24 16:53:11,escalation_l2,,possible fall detected
+1_rehearsal,2026-10-24 16:54:12,escalation_l3,,possible fall detected
+1_rehearsal,2026-10-24 16:56:21,possible_fall,,lying 30s
+1_rehearsal,2026-10-24 16:56:21,escalation_l1,,possible fall detected
+1_rehearsal,2026-10-24 16:56:54,help_request,,voice command
+1_rehearsal,2026-10-24 16:57:22,escalation_l2,,possible fall detected
+1_rehearsal,2026-10-24 16:58:22,escalation_l3,,possible fall detected
+1_rehearsal,2026-10-24 17:00:55,possible_fall,,lying 30s
+1_rehearsal,2026-10-24 17:00:55,escalation_l1,,possible fall detected
+1_rehearsal,2026-10-24 17:01:06,escalation_resolved,,possible fall detected
+2_clean,2026-10-24 17:16:22,taken,advil,absent 21s
+2_clean,2026-10-24 17:17:03,taken,melatonin,absent 16s
+2_clean,2026-10-24 17:18:13,possible_fall,,lying 30s
+2_clean,2026-10-24 17:18:13,escalation_l1,,possible fall detected
+2_clean,2026-10-24 17:18:21,escalation_resolved,,possible fall detected
+2_clean,2026-10-24 17:19:13,possible_fall,,lying 30s
+2_clean,2026-10-24 17:19:13,escalation_l1,,possible fall detected
+2_clean,2026-10-24 17:20:13,escalation_l2,,possible fall detected
+2_clean,2026-10-24 17:21:14,escalation_l3,,possible fall detected
+2_clean,2026-10-24 17:24:04,possible_fall,,lying 30s
+2_clean,2026-10-24 17:27:16,wrong_medication,,1 unrecognised bottle (conf 0.35)
+2_clean,2026-10-24 17:27:46,wrong_medication,,1 unrecognised bottle (conf 0.18)
+2_clean,2026-10-24 17:28:17,wrong_medication,,1 unrecognised bottle (conf 0.13)
+2_clean,2026-10-24 17:28:47,wrong_medication,,1 unrecognised bottle (conf 0.17)
+2_clean,2026-10-24 17:30:49,wrong_medication,,1 unrecognised bottle (conf 0.31)
