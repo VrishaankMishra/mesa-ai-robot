@@ -23,9 +23,17 @@ auto throughout (gain/exposure in `scene_luminance.csv`). Conditions and their s
 - `afternoon_blinds_dim_lamp` (Oct 19, 15:08) — **confounded, do not quote**: the far-mark
   bottle was placed at the table's far edge, ~30% smaller in frame than in the paired cell,
   and the lamp head's aim was not recorded. 10% under the deployed arm.
-- `evening_dim` / `evening_dim_lamp` (Oct 22, after sunset) — the true evening pair,
-  comparable to site A's; bottle on the tape, lamp head aimed across at the label faces
-  from beside the camera. See the tables.
+- `evening_dim` / `evening_dim_lamp` (Oct 23, 20:52 and 21:01, after dark) — the true
+  evening pair, comparable to site A's. Room lit only by the **kitchen lights spilling in
+  from the adjacent room** (this room's ceiling lights off); with everything off the
+  camera read median grey 3, i.e. nothing, so that was not used. `evening_dim` reads
+  median 18 at gain 255 / exposure 665 — darker than site A's 39; the lamp cell reads 69
+  at the same gain and exposure with 0% blown, the lamp head aimed across at the label
+  faces from beside the camera, not down at the table. Bottles on the tape marks; the
+  32" tape sits at this table's far edge. Camera remounted that evening with the table's
+  far edge at 30% of the frame — steeper than the Oct 19 cells (44%) — so the
+  evening-vs-midday comparison within this site carries a small geometry difference;
+  the lamp pair itself shares one position.
 - `midday_lamps_off_pilot_steep_manualexp` — pilot, excluded from the grid: camera tilted
   steeper than the reference *and* left in manual exposure (312) by a prior `site_check`
   run (median grey 215 vs 123 for the room). Kept because it shows the geometry failure
