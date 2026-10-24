@@ -56,6 +56,18 @@ def test_known_boxes_never_count_as_unknown():
     assert unknown_boxes([det("advil"), det("melatonin")]) == []
 
 
+def test_unknown_below_min_confidence_is_noise_not_a_bottle():
+    # The detector predicts at confidence 0; a patterned rug or a lamp base yields
+    # permanent 0.08-0.24 "unknown" boxes that must not become "wrong medication".
+    noise, bottle = det("unknown", 0.12), det("unknown", 0.31)
+    assert unknown_boxes([noise, bottle], min_confidence=0.25) == [bottle]
+    assert unknown_boxes([noise], min_confidence=0.25) == []
+
+
+def test_min_confidence_defaults_to_zero_keeping_old_behaviour():
+    assert unknown_boxes([det("unknown", 0.05)]) == [det("unknown", 0.05)]
+
+
 # --- UnknownBottleGate: debounce + rate limit with simulated time ---
 
 
