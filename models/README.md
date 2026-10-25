@@ -5,11 +5,17 @@ actual model inventory as of 2026-08-09 and how to reproduce it.
 
 ## Current inventory (on iMac `models/` and Pi `~/mesa-ai-robot/models/`)
 
-| File | Arm | Training data | Held-out test mAP@50 | Status |
-|------|-----|---------------|----------------------|--------|
-| `best.pt` | **v2 — deployed champion** | v1 evening round + v2 daylight round (Roboflow v2) | **0.953** | powers `main.py --live` |
-| `best_v1_backup.pt` | v1 | evening round only | 0.95 (val) | study baseline arm |
-| `best_v3syn.pt` | v3syn | v2 + synthetic white-balance ×3 | 0.979 (val) | **negative-result arm** — do NOT deploy (loses every off-domain condition; see `docs/eval/`) |
+| File | Arm | Training data | mAP@50 (split) | Status |
+|------|-----|---------------|----------------|--------|
+| `best.pt` | **v2 — deployed champion** | v1 evening round + v2 daylight round (Roboflow v2) | 0.95–0.98 band (validation, Colab); no held-out test run on record | powers `main.py --live` |
+| `best_v1_backup.pt` | v1 | evening round only | **0.953** (held-out test, 92 images, Aug 6 — `docs/eval/eval-report-v1.md`); 0.95 (validation) | study baseline arm |
+| `best_v3syn.pt` | v3syn | v2 + synthetic white-balance ×3 | 0.979 (validation) | **negative-result arm** — do NOT deploy (loses every off-domain condition; see `docs/eval/`) |
+
+The 0.953 is the v1 round's number: `eval-report-v1.md` scored the weights that were
+`best.pt` on Aug 6, before the Aug 7 daylight retrain replaced them (they are the file now
+kept as `best_v1_backup.pt`). An earlier revision of this table carried 0.953 against v2;
+that run does not exist. Re-scoring v2 and v3syn on the test split needs the Roboflow export
+(`datasets/data.yaml`), which is not kept in the repo.
 | `vosk-model-small-en-us/` | — | — | — | offline STT (see below) |
 
 **Deployment rule:** validation mAP cannot pick between these arms (0.95–0.98 for all
