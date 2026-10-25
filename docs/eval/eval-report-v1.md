@@ -1,5 +1,10 @@
 # Detector Evaluation Report — v1 (VIS-005)
 
+> Provenance (noted Oct 24, 2026): this report scores the **v1 evening-round model**, which
+> was `models/best.pt` on Aug 6. The Aug 7 daylight retrain (v2) replaced that file; the
+> weights scored here are kept as `models/best_v1_backup.pt`. No held-out test run exists for
+> v2 or v3syn — see `models/README.md`.
+
 **M2 GATE: PASSED.** Held-out **test mAP@50 = 0.953** (target ≥ 0.90).
 
 ## Run metadata
