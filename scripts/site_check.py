@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """On-site readiness check for an unmeasured room (VIS-011 / demo prep).
 
-    .venv/bin/python scripts/site_check.py --label "library room 208"
+    .venv/bin/python scripts/site_check.py --label "demo room"
 
-The Sept 13 demo is in a room the model has never seen. Every number this project has
+A demo room is a room the model has never seen. Every number this project has
 describes one home office, and the domain-shift study is precisely the finding that a
 detector interpolates inside its covered envelope and collapses outside it. This script
 turns an unmeasured room into a measured one in the time it takes to set up a table.

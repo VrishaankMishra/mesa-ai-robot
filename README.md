@@ -9,15 +9,15 @@ research instrument that measured the limits of its own vision.
 > ⚠️ **Assistive aid, not a medical device.** Fall detection is tested only with staged
 > poses on cushions and must not be relied on for real emergencies.
 
-## Status (Aug 2026)
+## Status (Oct 2026)
 
 | Demo | Status |
 |------|--------|
-| **MED** — recognize 8 medications, flag unknowns as "wrong medication" | ✅ live-verified (test mAP@50 **0.953**) |
+| **MED** — recognize 8 medications, flag unknowns as "wrong medication" | ✅ live-verified (first training round: held-out test mAP@50 **0.953**; all three arms 0.95–0.98 on validation) |
 | **LOG** — bottle absent ≥10 s then returned → timestamped `taken` event → dashboard | ✅ live-verified on the Pi |
 | **FALL** — standing/sitting/lying; sustained lying → spoken check-in | ✅ live-verified (incl. lying-detection fallback chain) |
 | **VOICE** — offline: next med, did-I-take, call-for-help, date/time, "I'm okay" | ✅ live-verified |
-| **ESCALATE** — L1 spoken check-in → L2 push (ntfy) → L3 caregiver alert | 🟡 logic + plumbing done; live run scheduled |
+| **ESCALATE** — L1 spoken check-in → L2 push (ntfy) → L3 caregiver alert | ✅ live-verified (unanswered check-in → L2 at 60 s, L3 at 120 s, both received on a phone) |
 | *(Stretch)* pan-tilt head tracking, OLED emotions | coded + unit-tested; on-Pi verification pending |
 
 ## Hardware tour
@@ -29,7 +29,8 @@ station, LED lamp, speakerphone): [setup tour video](https://github.com/Vrishaan
 
 ## The research: MeSA measures her own blind spots
 
-The detector scored 0.953 mAP@50 — then failed at 8 PM in its own room. Instead of
+The detectors sit in a 0.95–0.98 validation band (the first round scored 0.953 on
+held-out test) — then failed at 8 PM in their own room. Instead of
 patching around that, the robot became the instrument: a **voice-guided evaluation
 protocol where scripted placement makes ground truth free** — 1,584 scripted field
 placements across an 8-condition lighting grid, each scored against 3 model arms
@@ -55,6 +56,17 @@ figures: [docs/eval/figures/](docs/eval/figures)):
   single condition (evening dim: 21% vs 65%).
 
 ![Detection rate by condition](docs/eval/figures/heatmap_best.png)
+
+**Second room (Oct 2026).** The same 8-medication grid was re-run in a second room with a
+different table and background (`family_room`, 1,512 frames, all three arms) — the eval
+pipeline takes any number of sites (`--site`). Every pooled cross-site difference is
+negative with an interval excluding zero (at matched midday lighting the deployed model
+pooled rate drops 33 points), the condition profile agrees across rooms (Spearman 0.80),
+and the dark-room lamp lift replicates in direction (+11 pp vs +23 pp). Tables with Wilson
+and Newcombe intervals: [docs/eval/site_stats.md](docs/eval/site_stats.md) · caveats per
+cell: [docs/eval/site_notes.md](docs/eval/site_notes.md) · figures:
+[docs/eval/figures/family_room/](docs/eval/figures/family_room) and
+[docs/eval/figures/two_site/](docs/eval/figures/two_site).
 
 ## Architecture
 
