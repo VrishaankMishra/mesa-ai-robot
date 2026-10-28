@@ -3,6 +3,9 @@
 Weights are **not committed** (gitignored; large and regenerable). This documents the
 actual model inventory as of 2026-08-09 and how to reproduce it.
 
+Per-arm training records, the Roboflow-version → model map, and SHA-256 checksums:
+[`training-metadata/`](training-metadata/) and [`../docs/training/`](../docs/training/).
+
 ## Current inventory (on iMac `models/` and Pi `~/mesa-ai-robot/models/`)
 
 | File | Arm | Training data | mAP@50 (split) | Status |
