@@ -19,6 +19,12 @@ The 0.953 is the v1 round's number: `eval-report-v1.md` scored the weights that 
 kept as `best_v1_backup.pt`). An earlier revision of this table carried 0.953 against v2;
 that run does not exist. Re-scoring v2 and v3syn on the test split needs the Roboflow export
 (`datasets/data.yaml`), which is not kept in the repo.
+
+**Correction (checkpoint-verified 2026-10-28):** the checkpoints' embedded `train_args` show
+`best.pt` / `best_v3syn.pt` trained on Roboflow **version 4** at **60 epochs** — the "v2" label
+above is the *both-rounds dataset round*, not the Roboflow version number; `best_v1_backup.pt`
+is version 1 at 100 epochs. Recover the champion's export with `version(4)`. Details:
+`training-metadata/checkpoint-provenance.md`.
 | `vosk-model-small-en-us/` | — | — | — | offline STT (see below) |
 
 **Deployment rule:** validation mAP cannot pick between these arms (0.95–0.98 for all
