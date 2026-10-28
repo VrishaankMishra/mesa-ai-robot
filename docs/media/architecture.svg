@@ -1,0 +1,135 @@
+<svg viewBox="0 0 1000 400" role="img" aria-labelledby="arch-title" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif">
+  <title id="arch-title">MeSA 2.0 architecture: a camera and a speakerphone feed two worker threads that publish events to one queue; the decision engine reads the queue and drives the log, the dashboard, the caregiver alert, and the speaker.</title>
+  <style>
+    .bg{fill:#ffffff}
+    .box{fill:#ffffff;stroke:#1b1b1b;stroke-width:1.2}
+    .queue{fill:#ffffff;stroke:#1C6B47;stroke-width:1.6}
+    .ln{stroke:#1b1b1b;stroke-width:1.3;fill:none}
+    .fb{stroke:#6B6660;stroke-width:1;fill:none}
+    .t{fill:#1b1b1b}
+    .m{fill:#6B6660}
+    .arr{fill:#1b1b1b}
+    @media (prefers-color-scheme:dark){
+      .bg{fill:#0d1117}
+      .box{fill:#161b22;stroke:#c9d1d9}
+      .queue{fill:#161b22;stroke:#3fb950}
+      .ln{stroke:#c9d1d9}
+      .fb{stroke:#8b949e}
+      .t{fill:#e6edf3}
+      .m{fill:#9198a1}
+      .arr{fill:#c9d1d9}
+    }
+  </style>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" class="arr"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1000" height="400"/>
+  <!-- column labels -->
+  <g font-size="10.5" letter-spacing="1.6" text-anchor="middle" class="m">
+    <text x="85" y="28">INPUTS</text>
+    <text x="330" y="28">WORKER THREADS</text>
+    <text x="548" y="28">EVENT QUEUE</text>
+    <text x="735" y="28">DECISION ENGINE</text>
+    <text x="920" y="28">OUTPUTS</text>
+  </g>
+  <!-- inputs -->
+  <g class="box">
+    <rect x="12" y="100" width="146" height="56" rx="8"/>
+    <rect x="12" y="236" width="146" height="56" rx="8"/>
+  </g>
+  <g font-size="14" font-weight="600" text-anchor="middle" class="t">
+    <text x="85" y="124">USB camera</text>
+    <text x="85" y="260">USB speakerphone</text>
+  </g>
+  <g font-size="11" text-anchor="middle" class="m">
+    <text x="85" y="142">640 × 480</text>
+    <text x="85" y="278">mic + speaker</text>
+  </g>
+  <!-- workers -->
+  <g class="box">
+    <rect x="215" y="72" width="230" height="112" rx="8"/>
+    <rect x="215" y="208" width="230" height="112" rx="8"/>
+  </g>
+  <g font-size="14" font-weight="600" class="t">
+    <text x="232" y="98">Vision thread</text>
+    <text x="232" y="234">Audio thread</text>
+  </g>
+  <g font-size="11.5" class="m">
+    <text x="232" y="120">OpenCV capture</text>
+    <text x="232" y="138">YOLOv8n detection, every 3rd frame</text>
+    <text x="232" y="156">MediaPipe pose, every frame</text>
+    <text x="232" y="174">posture · presence · unknown bottle</text>
+    <text x="232" y="256">push-to-talk window</text>
+    <text x="232" y="274">Vosk speech to text, offline</text>
+    <text x="232" y="292">intent parser</text>
+    <text x="232" y="310">pyttsx3 text to speech</text>
+  </g>
+  <!-- queue -->
+  <rect class="queue" x="500" y="72" width="96" height="248" rx="8"/>
+  <g font-size="14" font-weight="600" text-anchor="middle" class="t">
+    <text x="548" y="100">Event</text>
+    <text x="548" y="118">queue</text>
+  </g>
+  <g font-size="10.5" text-anchor="middle" class="m">
+    <text x="548" y="150">bottle</text>
+    <text x="548" y="163">observation</text>
+    <text x="548" y="186">posture</text>
+    <text x="548" y="209">presence</text>
+    <text x="548" y="222">check</text>
+    <text x="548" y="245">help</text>
+    <text x="548" y="258">request</text>
+    <text x="548" y="281">acknowledge</text>
+    <text x="548" y="304">in order</text>
+  </g>
+  <!-- engine -->
+  <rect class="box" x="650" y="72" width="170" height="248" rx="8"/>
+  <g font-size="14" font-weight="600" class="t">
+    <text x="667" y="100">Decision engine</text>
+  </g>
+  <g font-size="11.5" class="m">
+    <text x="667" y="130">compliance tracker</text>
+    <text x="667" y="146">taken after 10 s away</text>
+    <text x="667" y="176">fall monitor</text>
+    <text x="667" y="192">lying 30 s → check-in</text>
+    <text x="667" y="222">inactivity monitor</text>
+    <text x="667" y="252">escalation</text>
+    <text x="667" y="268">L1 ask → L2 push → L3</text>
+    <text x="667" y="298">one config.yaml</text>
+  </g>
+  <!-- outputs -->
+  <g class="box">
+    <rect x="860" y="52" width="120" height="48" rx="8"/>
+    <rect x="860" y="124" width="120" height="48" rx="8"/>
+    <rect x="860" y="196" width="120" height="48" rx="8"/>
+    <rect x="860" y="268" width="120" height="48" rx="8"/>
+  </g>
+  <g font-size="13" font-weight="600" text-anchor="middle" class="t">
+    <text x="920" y="72">SQLite log</text>
+    <text x="920" y="144">Dashboard</text>
+    <text x="920" y="216">Caregiver push</text>
+    <text x="920" y="288">Speaker · face</text>
+  </g>
+  <g font-size="10.5" text-anchor="middle" class="m">
+    <text x="920" y="88">events.db</text>
+    <text x="920" y="160">Streamlit, home Wi-Fi</text>
+    <text x="920" y="232">ntfy.sh, HTTPS</text>
+    <text x="920" y="304">OLED, pan/tilt head</text>
+  </g>
+  <!-- data-flow arrows -->
+  <g class="ln" marker-end="url(#arr)">
+    <path d="M158,128 L215,128"/>
+    <path d="M158,264 L215,264"/>
+    <path d="M445,128 L500,128"/>
+    <path d="M445,264 L500,264"/>
+    <path d="M596,196 L650,196"/>
+    <path d="M820,120 C840,120 840,76 860,76"/>
+    <path d="M820,170 C840,170 840,148 860,148"/>
+    <path d="M820,222 C840,222 840,220 860,220"/>
+    <path d="M820,272 C840,272 840,292 860,292"/>
+  </g>
+  <!-- spoken replies loop back out through the audio thread -->
+  <path class="fb" d="M820,300 C840,300 840,350 548,350 C300,350 300,320 330,320" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+  <text x="548" y="366" font-size="10.5" text-anchor="middle" class="m">spoken replies and check-ins go back out through the audio thread</text>
+</svg>
