@@ -13,6 +13,7 @@ home context). This README documents what exists and where it lives.
 
 - **Roboflow:** workspace `vrishaank-mishra`, project `medication-safety-object-detecti`
   (v1 = first round; v2 = both rounds; 2,218+ images after ×3 augmentation).
+  Export manifest + fingerprint for the v1 export we kept: [`manifests/roboflow-v1.md`](manifests/roboflow-v1.md).
 - All labels hand-drawn (Label Assist rejected — it mislabels in the model's own blind
   spots). **Annotations are ground truth; filenames are not** (capture-swap artifacts).
 - Capture tooling: `scripts/capture.py` (laptop, GUI) and `scripts/capture_guided.py`

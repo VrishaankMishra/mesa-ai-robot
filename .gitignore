@@ -10,6 +10,7 @@ venv/
 # Models & data (large / generated) — keep the placeholder README
 models/*
 !models/README.md
+!models/training-metadata/
 *.pt
 *.onnx
 events.db
@@ -19,6 +20,7 @@ events.db
 datasets/*
 !datasets/README.md
 !datasets/data.yaml.template
+!datasets/manifests/
 captures/
 
 # Research capture clips (features-only .npz; never commit raw collected data)
