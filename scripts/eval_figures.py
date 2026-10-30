@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper figures from the domain-shift results CSV (RES-002).
+"""Study figures from the domain-shift results CSV (RES-002).
 
 Reads docs/eval/domain_shift_results.csv (output of eval_analyze.py) and writes
 publication PNGs to docs/eval/figures/. Model arms are auto-detected, so re-running
@@ -179,7 +179,7 @@ def fig_model_arms(cells, models):
 
 def main() -> int:
     global OUT
-    p = argparse.ArgumentParser(description="Paper figures from the results CSV")
+    p = argparse.ArgumentParser(description="Study figures from the results CSV")
     p.add_argument("--csv", default=str(CSV))
     p.add_argument("--site", default=DEFAULT_SITE, help="site to draw (one per run)")
     p.add_argument("--default-site", default=DEFAULT_SITE,

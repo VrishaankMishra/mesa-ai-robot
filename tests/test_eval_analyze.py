@@ -1,4 +1,4 @@
-"""Tests for the domain-shift evaluation scoring rules (paper data integrity)."""
+"""Tests for the domain-shift evaluation scoring rules (study data integrity)."""
 
 import importlib.util
 import sys

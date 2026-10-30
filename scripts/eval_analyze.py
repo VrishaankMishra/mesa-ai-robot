@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Domain-shift evaluation analyzer (paper data).
+"""Domain-shift evaluation analyzer (study data).
 
 Scores one or more model weight files against every captured evaluation session
 (``eval_data/[<site>/]<condition>/<session>/`` from ``eval_capture.py``) and writes a

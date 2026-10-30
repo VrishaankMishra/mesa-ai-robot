@@ -1,7 +1,7 @@
 Hand-written caveats, copied verbatim into `site_stats.md` by `eval_stats.py` so they
 survive regeneration. Numbers are in the tables; this file says which of them to trust.
 
-**`home_office`** (Aug 8–9, 2026): the paper's grid. Per-session luminance was recomputed
+**`home_office`** (Aug 8–9, 2026): the August study's grid. Per-session luminance was recomputed
 after the fact from whole frames (`source=retro_frame00`); camera gain/exposure were not
 recorded then. `evening_dim` there was captured at 21:11 with only computer screens lit.
 

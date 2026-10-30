@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate voice-grid session manifests into the paper-#2 results table (RES-004).
+"""Aggregate voice-grid session manifests into the RES-004 results table.
 
     .venv/bin/python scripts/eval_voice_analyze.py --eval-dir eval_voice \
         --out docs/eval/voice_grid_results.csv
