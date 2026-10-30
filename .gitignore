@@ -11,6 +11,7 @@ venv/
 models/*
 !models/README.md
 !models/training-metadata/
+!models/archive/
 *.pt
 *.onnx
 events.db
