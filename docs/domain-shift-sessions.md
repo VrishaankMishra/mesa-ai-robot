@@ -10,7 +10,7 @@ that compares cell-for-cell with every site before it.
 
 | Site label | Room | Grid captured | Notes |
 |---|---|---|---|
-| `home_office` | original station (the paper's room) | Aug 8–9, 2026 | predates `--site`; sits directly under `eval_data/` |
+| `home_office` | original station (the August study's room) | Aug 8–9, 2026 | predates `--site`; sits directly under `eval_data/` |
 | `family_room` | grey folding table, rug behind the far mark | Oct 19, 2026 | 4 cells (midday ±lamp, evening-dim ±lamp) + 1 pilot; caveats in `docs/eval/site_notes.md` |
 
 Each site's caveats — a confounded cell, a condition skipped on purpose — go in

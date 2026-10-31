@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Voice-reliability evaluation session (RES-004 / paper #2 data).
+"""Voice-reliability evaluation session (RES-004 data).
 
 The audio sibling of eval_capture.py, using the same free-ground-truth trick: the robot
 SPEAKS each prompt, the operator repeats it after the cue, and the expected utterance +

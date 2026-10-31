@@ -2,10 +2,10 @@
 
 > **STATUS (2026-08-09):** Weeks 1–6 complete and live-verified (4 of 5 core demos:
 > MED, LOG, FALL, VOICE; ESCALATE needs one live run — ntfy topic now set). A research
-> extension (domain-shift study) completed Aug 8–9: docs/eval/ + docs/paper/. Remaining:
+> extension (domain-shift study) completed Aug 8–9: docs/eval/. Remaining:
 > ESCALATE live test, systemd + soak (HW-002/003, ENG-007), dashboard-on-LAN check
 > (DASH-002), on-Pi servo/OLED verification (HW-004–006), demo video + rehearsal
-> (Week 10). Day-by-day history: docs/engineering-notebook.md.
+> (Week 10).
 
 Derived from `mesa-2_0-project-plan*.pdf`. This is the working build guide: do the steps
 in order, close each ticket only when its **acceptance criteria (AC)** are met, and commit
@@ -172,7 +172,7 @@ The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
 
 - [ ] **DOC-001** (3h) — README overhaul: architecture diagram, setup guide, demo GIFs, results table (mAP, posture accuracy, FPS).
 - [ ] **DOC-002** (3h) — Final demo video: 3–4 min, all 5 Definition-of-Done demos shown live, narrated.
-- [ ] **DOC-003** (3h) — Project abstract + poster draft: 1-page abstract (problem, system, results, impact) for science fair / applications.
+- [ ] **DOC-003** (3h) — Project abstract + poster draft: 1-page abstract (problem, system, results, impact).
 - [ ] **ENG-008** (2h) — Dress rehearsal: full scripted demo run twice without intervention; fallback recorded video ready.
 
 **Proof:** video, README, abstract.

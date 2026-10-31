@@ -157,7 +157,7 @@ Running for real:
 | Score eval sessions (all sites) | `python scripts/eval_analyze.py --models …` | eval_data + weights |
 | Scene luminance per session | `python scripts/eval_luminance.py` | eval_data |
 | Statistics pass + site replication | `python scripts/eval_stats.py` | results CSV |
-| Regenerate paper figures | `python scripts/eval_figures.py [--site <room>]` | results CSV |
+| Regenerate study figures | `python scripts/eval_figures.py [--site <room>]` | results CSV |
 
 Config (thresholds, model paths, ntfy topic) lives in [`config.yaml`](config.yaml).
 Weights and images are gitignored — see [`models/README.md`](models/README.md) and

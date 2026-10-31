@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Domain-shift evaluation capture (RES-002 / paper data collection).
+"""Domain-shift evaluation capture (RES-002 data collection).
 
 Voice-guided, standardized placement session for ONE environmental condition.
 Because placement is scripted, ground truth is free: no labeling ever. Frames and a
@@ -112,7 +112,7 @@ def main() -> int:
         return 1
 
     # Scene luminance of the empty table, before anything is placed: the per-session
-    # illumination measurement the paper reports (median grey 30–116 across the grid).
+    # illumination measurement the study reports (median grey 30–116 across the grid).
     time.sleep(2.5)  # let auto-exposure settle before judging the room
     frame = grab(cap, flush=10)
     if frame is not None:

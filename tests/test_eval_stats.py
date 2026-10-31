@@ -65,7 +65,7 @@ class TestTrend:
         assert abs(z) < 1e-9 and math.isclose(p, 1.0)
 
     def test_two_sided_collapse_has_weak_linear_trend(self):
-        # High in the middle, low at both ends: the paper's shape. Linear z near zero.
+        # High in the middle, low at both ends: the study's shape. Linear z near zero.
         z, _ = es.cochran_armitage([(5, 22, 30), (21, 22, 60), (21, 22, 90), (5, 22, 120)])
         assert abs(z) < 1.0
 

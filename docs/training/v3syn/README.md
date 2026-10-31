@@ -12,7 +12,7 @@
 - **Result:** 0.979 validation — yet loses every off-domain condition in deployment
   (`docs/eval/domain_shift_results.csv`). The pre-registered "synthetic beats more data"
   prediction that was wrong **at Site A**; the two-site data shows the effect is
-  site-dependent (see `docs/paper/`).
+  site-dependent (see `docs/eval/site_stats.md`).
 - **Weights SHA-256:** `c41708…485fcad`.
 - **Status:** **do NOT deploy** — research arm only.
 - **Open:** per-epoch logs re-exported from Colab; test re-score needs **version 4** from Roboflow.
