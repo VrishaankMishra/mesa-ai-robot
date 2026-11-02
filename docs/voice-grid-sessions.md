@@ -1,167 +1,132 @@
-# Voice-Reliability Grid — session protocol (RES-004)
+# Voice-Reliability Grid — protocol and results (RES-004)
 
-The audio sibling of the domain-shift study: same free-ground-truth trick, applied to
-the speech stack. Robot speaks each prompt; the operator repeats it after the "go" cue;
-expected utterance + intent are known by construction. 18 scripted trials ≈ 4 minutes
-per cell.
+The audio sibling of the domain-shift study: the same ground-truth-by-construction trick,
+applied to the speech stack. The robot speaks each prompt; the operator repeats it after
+the "go" cue; the expected utterance and intent are known by construction. 18 scripted
+trials ≈ 4 minutes per cell.
 
-## The grid (12 cells minimum, 18 with a third speaker)
+## What the grid found, and where it stopped
 
-distance {1m, 2m, 3m} × noise {quiet, tv} × speaker {vrishaank, mom, (+1 optional)}
+Four real cells were measured (three quiet cells at taped distances and one in demo
+posture). They were enough to settle the question the grid existed for: **the wake word
+was the bottleneck, not distance.** Wake-word recognition sat near 70 % and failed by
+homophone substitution ("MeSA" heard as `may so`, `made so`, `mr`, `minister`); intent
+parsing given a detected wake was 80–91 %. The live build therefore replaced the wake word
+with **push-to-talk** (`voice.push_to_talk` in `config.yaml`) and a constrained grammar,
+which removed the failure mode the grid measured. The remaining cells (noise conditions, a
+second speaker) were not run: they would have measured a listening path the robot no
+longer uses. The protocol stays here because it transfers unchanged to any future voice
+change.
 
-- Mark 1m / 2m / 3m from the SP300U speakerphone with tape (one-time). **Done 2026-08-27.**
+## The grid as designed
+
+distance {1 m, 2 m, 3 m} × noise {quiet, tv} × speaker {operator, +1 optional}
+
+- Marks at 1 m / 2 m / 3 m from the speakerphone, taped.
 - **The microphone is pinned by name, not by index.** The capture script resolves the
-  SP300U by name substring and refuses to run if it cannot find exactly one match; the
+  speakerphone by name substring and refuses to run unless it finds exactly one match; the
   device it used is printed at session start and written into every manifest row. This is
-  method, not plumbing: sounddevice's default input resolves through ALSA `default` to
-  whatever pulse picks, the Pi has a second mic in the C920, and card numbers move across
-  reboots (the SP300U was card 3 in July and card 2 on 2026-08-27). An unpinned default
-  would make "3m from the speakerphone" silently mean "3m from the webcam". Override with
-  `--device` only when deliberately changing microphones — and say so in the write-up.
-- `tv` cells: the same audio source at the same volume every time (pick a show, note
-  the volume step in this doc after the first session; it becomes part of the method).
-  **Still to choose — the `tv` cells cannot start until it is fixed and written here.**
-- One command per cell, run from the Pi:
+  method, not plumbing: sounddevice's default input resolves through ALSA to whatever the
+  system picks, the Pi has a second microphone in the webcam, and card numbers move across
+  reboots. An unpinned default would silently make "3 m from the speakerphone" mean "3 m
+  from the webcam". Override with `--device` only when deliberately changing microphones.
+- `tv` cells need one audio source at one fixed volume, written into this file before the
+  first session so it becomes part of the method. None was chosen; no `tv` cell was run.
+- One command per cell, from the Pi:
 
 ```bash
-.venv/bin/python scripts/eval_voice_capture.py --condition d1m_quiet_vrishaank \
+.venv/bin/python scripts/eval_voice_capture.py --condition d1m_quiet_operator \
     --posture standing --position "1m mark"
 ```
 
-`--posture` and `--position` are **required**: on 2026-08-27 three sessions were labelled
-`d1m`/`d2m`/`d3m` and read as a distance sweep when all three had in fact been run from one
-seated position. The condition string is a filename, not evidence — where the operator was
-is now recorded per trial, from the room. Each trial's audio is also saved beside the
-manifest (`trial_NN.wav`), so a disputed trial can be settled by ear instead of by argument.
+`--posture` and `--position` are **required**: the condition string is a filename, not
+evidence, and where the operator actually was is recorded per trial, from the room. Each
+trial's audio is saved beside the manifest (`trial_NN.wav`) so a disputed trial can be
+settled by ear.
 
-Naming: `d{1m|2m|3m}_{quiet|tv}_{speaker}`. Speak at your normal voice; do NOT lean in
-or shout — the study measures the system, not the operator's effort.
+Naming: `d{1m|2m|3m}_{quiet|tv}_{speaker}`. Normal voice; do not lean in or shout — the
+study measures the system, not the operator's effort.
 
 ## What each trial logs
-Transcript (Vosk), wake-word detection, parsed intent, and exact-correctness vs the
-scripted ground truth — including no-wake controls (should NOT trigger), a
-near-homophone control ("may sun…"), and the negation-guard trial ("I don't need help"
-must parse OKAY, not HELP).
 
-## After a batch
-```bash
-.venv/bin/python scripts/eval_voice_analyze.py
-```
-Per-cell: wake rate, false-wake rate, intent accuracy given wake, exact rate →
-`docs/eval/voice_grid_results.csv`. ~2 hours total across a few days completes the grid.
+Transcript (Vosk), wake-word detection, parsed intent, and exact correctness against the
+scripted ground truth — including no-wake controls (must NOT trigger), a near-homophone
+control ("may sun…"), and the negation guard ("I don't need help" must parse OKAY, not HELP).
 
+Scoring: `scripts/eval_voice_analyze.py` → per-cell wake rate, false-wake rate, intent
+accuracy given wake, exact rate → `docs/eval/voice_grid_results.csv`. The analyzer groups
+by the manifest's `condition` column, not the directory name, so pilot rows (suffix
+`_pilot`) can never merge into the grid.
 
-## Pilot round — 2026-08-27 (NOT grid data — one condition, three repeats)
+## Results
 
-Three quiet sessions were run end-to-end as a **pilot**, to shake out the protocol rather than
-to measure the system. Their condition labels carry a `_pilot` suffix *inside the manifests* as
-well as in the directory names, so `eval_voice_analyze.py` — which groups by the `condition`
-column, not the path — can never merge them into the real grid.
+### Pilot — 2026-08-27 (one condition, three repeats; not grid data)
 
-**Correction (recorded deliberately).** These were first labelled `d1m` / `d2m` / `d3m` and read
-as a distance sweep. They were not: all three ran from **~36 inches (0.91 m), seated in a chair**.
-They are three repeats of one condition, relabelled `d36in_seated_quiet_vrishaank_pilot_run1/2/3`.
-The earlier reading — "distance is not the limiting factor between 1 m and 3 m" — was unsupported
-and has been withdrawn. Flat numbers across three identical conditions are what identical
-conditions look like.
+Three sessions first labelled `d1m`/`d2m`/`d3m` were in fact three repeats of one seated
+position (~0.91 m). The distance claim drawn from them was withdrawn; the sessions were
+relabelled `d36in_seated_quiet_operator_pilot_run1/2/3` and kept as a test-retest measurement.
 
 | run (same condition) | wake | false-wake | intent given wake | exact |
 |----------------------|------|-----------|-------------------|-------|
-| run 1 | 73% | 67% | 91% | 61% |
-| run 2 | 73% | 0%  | 100% | 78% |
-| run 3 | 80% | 0%  | 92% | 78% |
+| run 1 | 73 % | 67 % | 91 % | 61 % |
+| run 2 | 73 % | 0 %  | 100 % | 78 % |
+| run 3 | 80 % | 0 %  | 92 % | 78 % |
 
-**What this round does support** (pilot-grade, n=18 per run, one speaker, one position):
-- **Test-retest spread on an unchanged condition: 17 points of exact rate (61→78%) and 7 points
-  of wake rate.** That is the noise floor. Any cell-to-cell difference in the real grid smaller
-  than this cannot be read as an effect, which is a number worth having before collecting 12 cells.
-- Intent parsing given a detected wake is strong (91–100%). The failure is upstream of intent:
-  "MeSA" was transcribed as `may so`, `reza so` and `minister`.
-- The 67% false-wake in run 1 did not reproduce in runs 2 or 3 (both 0%), consistent with
-  first-run warm-up on the no-wake controls — the reflex to say the wake word anyway.
+**Test-retest spread on an unchanged condition: 17 points of exact rate and 7 points of
+wake rate.** That is the noise floor; any cell-to-cell difference smaller than it is not an
+effect. The 67 % false-wake in run 1 did not reproduce (operator reflex on the no-wake
+controls, first session only).
 
-**A variable the grid design does not currently control:** these runs were **seated**, while the
-grid assumes standing at a taped mark. Mouth height and orientation relative to the SP300U differ
-between the two. Posture needs to be fixed in the protocol and recorded per session, or it becomes
-an uncontrolled variable riding along with distance.
+Three protocol defects found here and fixed before the grid: the robot recorded the tail
+of its own prompt (a guard gap now drains playback before the cue); the near-homophone
+control was passing on silence (a control that cannot fail is worse than none); nothing
+recorded what the operator actually said (per-trial audio is now saved).
 
-**Three protocol defects to fix before any grid cell is run:**
-1. **The robot records its own prompt.** `espeak-ng` returns when it has handed audio to the USB
-   speakerphone, not when playback finishes, so the tail of *"Repeat: …"* is still audible when the
-   capture window opens. Trial 17 transcribed as `repeat` in two runs and `may says wait what
-   repeat` in the third. Fix: a guard gap after the beep so playback drains before recording starts.
-2. **The near-homophone control passes for the wrong reason.** Trial 17 exists to prove "may sun"
-   does not trip the wake word. In all three runs the microphone mostly heard the prompt, so
-   `wake=False` was recorded and scored as a pass while nothing was actually tested. A control that
-   passes on silence is worse than no control.
-3. **Nothing records what the operator actually said** — only Vosk's transcript. That is why run 1's
-   false-wake rate cannot be attributed: operator habit, ASR hallucination and prompt bleed are
-   indistinguishable after the fact. Fix: save each trial's audio into the session directory (own
-   voice, `eval_voice/` is gitignored, privacy stance unchanged).
-
-**Also still open:** the `tv` volume step is unchosen, so no `tv` cell can start.
-
-
-## Quiet cells complete — 2026-09-05 (real grid data)
-
-Three quiet cells run standing at the taped marks, replacing the deleted Aug 27 pilot.
-Provenance is stamped per row (`posture=standing`, `position`, device, capture rate) and
-each trial's audio is saved beside its manifest.
+### Quiet cells — 2026-09-05 (standing at the taped marks)
 
 | cell | wake | false-wake | intent given wake | exact |
 |------|------|-----------|-------------------|-------|
-| `d1m_quiet_vrishaank` | 73% | 0% | 82% | 67% |
-| `d2m_quiet_vrishaank` | 67% | 0% | 80% | 61% |
-| `d3m_quiet_vrishaank` | 73% | 0% | 91% | 72% |
+| `d1m_quiet` | 73 % | 0 % | 82 % | 67 % |
+| `d2m_quiet` | 67 % | 0 % | 80 % | 61 % |
+| `d3m_quiet` | 73 % | 0 % | 91 % | 72 % |
 
 **Distance does not measurably affect performance between 1 m and 3 m in a quiet room.**
-Wake rate spans 6 points against the pilot's 7-point test-retest floor; exact rate spans
-11 against a 17-point floor. Both differences sit inside the noise, so neither is an
-effect. (The August pilot appeared to show the same thing, but could not support it —
-those were three repeats of one seated position.)
+Wake rate spans 6 points against the 7-point floor; exact rate spans 11 against 17. False
+wake was 0 % in all 54 trials, including the near-homophone control, which now genuinely
+exercises the wake word.
 
-**The wake word is the bottleneck, not range.** Recognition sits near 70% and fails by
-homophone substitution: "MeSA" transcribed as `may so`, `made so`, `mr`, `ms raisa`,
-`minister`. Intent parsing given a detected wake is 80–91%, so the failure is upstream of
-intent every time. False-wake was 0% in all three cells, including the near-homophone
-control, which now genuinely exercises the wake word (no prompt bleed in any of the 54
-trials).
+Two harness defects were found and fixed in this session: the guard gap sat between the
+cue and the recording rather than between the prompt and the cue, so the operator spoke
+into a closed microphone (3/18 wake before the fix); and the manifest header had drifted
+four columns short of the row, so provenance fields were written but unlabelled — the
+writer is now schema-driven.
 
-**Demo implication:** at ~70% wake rate roughly one command in three needs repeating.
-VOX-005 targets 90%+ at 1–2 m, so the gap is real and it is a wake-word problem — a
-"say again?" fallback is necessary but not sufficient.
-
-**Two harness defects were found and fixed during this session** (see `fix/voice-cue-order`):
-the 0.8 s guard sat between the cue and the recording rather than between the prompt and
-the cue, so the operator spoke into a closed microphone — 3/18 with 0% wake detection
-before the fix. And the manifest header had drifted four columns short of the row, so the
-provenance fields were written but unlabelled; the writer is now schema-driven.
-
-**Still blocked:** the `tv` volume step (6 cells) and SRC approval (Mom's cells).
-
-
-## Station cell — 2026-09-07 (demo posture, VOX-005)
-
-Run at the medication station, standing where Student D stands in Act 3, ~1.5 m from the
-SP300U — not at the taped distance marks. This is the number Act 3 actually depends on.
+### Demo-posture cell — 2026-09-07 (standing at the station, ~1.5 m)
 
 | | wake | false-wake | intent given wake | exact |
 |---|---|---|---|---|
-| `station_demo_posture` | **80%** (12/15) | 0/3 | **67%** (8/12) | 61% |
+| `station_demo_posture` | **80 %** (12/15) | 0/3 | **67 %** (8/12) | 61 % |
 
-**The wake-word variants worked in live speech.** `may so on is my next bill` woke the robot —
-that utterance would have been silence the day before. `may son as bright today` was still
-correctly rejected, so token-based matching held outside the test suite.
+Accepting measured mishearings of the wake word as wake tokens lifted wake rate from ~71 %
+to 80 % in live speech; a single cell of 15 trials against a 7-point floor, so the mechanism
+is proven and the size of the gain is not. The failures moved downstream to transcription
+quality (`mesa one of the next`, `our days it today`), every one returning UNKNOWN and the
+graceful "Sorry, I didn't catch that" line. Per command: "call for help", "help me", "I'm
+okay" and "I don't need help" all landed; "next medication" and "what day is it" each
+failed twice.
 
-**Read the 71% → 80% gain cautiously.** The pilot measured a 7-point test-retest floor on wake
-rate, and this is a single cell of 15 wake-expected trials. The mechanism is proven; the size of
-the gain is not.
+## What the live build does now
 
-**The bottleneck moved to intent parsing (67%).** All four failures are transcription quality
-rather than parsing logic — `mesa one of the next`, `oh it may so what`, `mesa our days it
-today` — and every one returns UNKNOWN, which triggers *"Sorry, I didn't catch that. Please say
-it again."* That is the graceful failure mode, and it is what Act 3 is scripted around.
+- Push-to-talk (`voice.push_to_talk.enabled: true`, keyboard by default; GPIO once a button
+  is wired). The press is the wake signal; nothing outside the 6 s window reaches the parser.
+- A constrained Vosk grammar (`voice.constrain_vocabulary: true`) of ~50 phrases, with
+  spoken aliases for medication names the small lexicon lacks (`voice.med_aliases`;
+  `scripts/check_vocabulary.py` finds any others).
+- The check-in after "Are you okay?" opens its own 30 s window with no press, and an
+  unrecognised reply inside it only extends the window. The acknowledgement is "I am okay"
+  (the grammar carries no contractions).
+- Live-verified on 2026-10-24: two scripted commands answered on the first press; the
+  check-in cleared by voice in 8 s.
 
-**Per-command reliability**, from this cell: `call for help`, `help me`, `I'm okay`, `I don't
-need help` all landed. `next medication` and `what day is it` both failed twice. Act 3 now leads
-with a reliable command before attempting the next-medication question.
+No measured number exists yet for push-to-talk in a noisy room. If one is wanted, this
+protocol produces it: the same capture script with the trigger pressed on the cue.

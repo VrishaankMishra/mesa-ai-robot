@@ -11,7 +11,7 @@ that compares cell-for-cell with every site before it.
 | Site label | Room | Grid captured | Notes |
 |---|---|---|---|
 | `home_office` | original station (the August study's room) | Aug 8–9, 2026 | predates `--site`; sits directly under `eval_data/` |
-| `family_room` | grey folding table, rug behind the far mark | Oct 19, 2026 | 4 cells (midday ±lamp, evening-dim ±lamp) + 1 pilot; caveats in `docs/eval/site_notes.md` |
+| `family_room` | grey folding table, rug behind the far mark | Oct 19 and 23, 2026 | 4 cells comparable to site A (midday ±lamp, evening-dim ±lamp), an extra afternoon-blinds pair, and 1 geometry pilot — 1,512 raw frames, 1,386 scored rows per arm; caveats in `docs/eval/site_notes.md` |
 
 Each site's caveats — a confounded cell, a condition skipped on purpose — go in
 `docs/eval/site_notes.md`; `eval_stats.py` copies that file into the top of its report.

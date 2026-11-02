@@ -1,78 +1,61 @@
 # Dataset Capture Protocol (VIS-001)
 
-Fixed, repeatable photo protocol for the MeSA medication dataset. Following this gives a
-dataset that generalizes instead of overfitting to one lighting setup (see risk:
-"Dataset overfits to home lighting").
+The repeatable photo protocol behind the MeSA medication dataset, as it was actually run
+(Jul 18 and Aug 7, 2026), with the two lessons that decide whether a capture is usable.
+The *evaluation* protocol — scripted placements with ground truth by construction — is a
+different document: `docs/domain-shift-sessions.md`.
 
-## Target
+## Classes
 
-- **≥600 images** total across **6 bottles** (~100 each).
-- Coverage matrix: **3 lighting × 3 angles × 3 distances**, plus cluttered backgrounds.
-- Split later in Roboflow: **70 / 20 / 10** train / val / test.
+Eight real medication containers plus a `tray` class for the group scene:
 
-## Bottles (classes)
-
-Use 6 visually distinct, real bottles. Suggested set (edit to match what you have):
-
-| Class id | Label         | Notes                                   |
+| Class id | Label         | Container                               |
 |----------|---------------|-----------------------------------------|
 | 0        | mylanta       | box (blue/red)                          |
 | 1        | vitamin_d3    | dark amber bottle, black cap            |
 | 2        | bayer_aspirin | small white bottle, orange label        |
 | 3        | cvs_allergy   | small white bottle, green cap           |
 | 4        | omeprazole    | small bottle, purple cap                |
-| 5        | melatonin     | Nature's Bounty, green bottle           |
-| 6        | ashwagandha   | Himalaya, amber bottle, green label     |
+| 5        | melatonin     | green bottle                            |
+| 6        | ashwagandha   | amber bottle, green label               |
 | 7        | advil         | white bottle, red label                 |
+| 8        | tray          | the multi-bottle group scene            |
 
-**Held-out "wrong medication" prop:** the Benadryl box is deliberately NOT captured or
-trained, so it triggers the unknown-bottle path in the MED demo.
+**Held-out "wrong medication" probe:** the Benadryl box is deliberately never captured or
+trained, so it exercises the unknown-bottle path. In the live demo the prop is an untrained
+*bottle* (TUMS): boxes are absorbed into the `mylanta` class (the open-set finding).
 
-Keep this list in sync with `data.yaml` (`names:`) used for training.
+The class list must match `data.yaml` (`names:`) used for training; the DB medication
+names must equal the detector labels exactly (presence matching is by string).
 
-## The capture rig
+## The rig
 
-- Fixed camera position: **Logitech C920**, mounted at the medication-station height.
-- Mark the bottle placement zone with tape so distances are repeatable.
-- Record the setup with a photo so it can be reproduced at the demo location.
+- **Logitech C920** taped above the medication station, looking down ~40–45°.
+- Bottle marks taped at **24" and 32"** from the lens.
+- Table empty apart from the one announced container (and the lamp base, which is in
+  every frame).
+- The rig is photographed (`docs/media/`) so it can be reproduced after any move.
 
-## Coverage matrix
+Geometry is load-bearing: a view that is steeper, side-on or across the room collapses
+detection independent of lighting (the family-room pilot session shows four medications
+absorbed into `advil` from too high a view).
 
-**Lighting (3):**
-1. Bright / daylight (window or room lights full).
-2. Warm / dim (evening, lamp only).
-3. Mixed / backlit (light source behind the bottle).
+## What was captured
 
-**Angle (3):** straight-on (0°), ~30° left, ~30° right (or slight high/low tilt).
+| Round | Date | Condition | Source images | Notes |
+|-------|------|-----------|---------------|-------|
+| v1 | Jul 18 | evening: bright / dim / mixed (lamp behind the bottle) | 924 | voice-guided, hands-free |
+| v2 daylight | Aug 7 | morning daylight, deployed geometry | 308 | after the lighting gap showed up live |
+| discarded | Jul 18 | two passes with parked bottles in frame | 616 | unlabelled instances poison training |
 
-**Distance (3):** tape marks at 0.6 m, 0.75 m, 0.9 m (24″ / mid / 36″ on the actual rig; add far-range shots in the Week-9 hardening pass if demo distance grows).
+All 1,232 kept images were hand-labelled in Roboflow (`docs/roboflow-setup.md`); split
+70/20/10. Per-arm training records: `docs/training/`.
 
-**Backgrounds:** include cluttered scenes — other objects, a tray with multiple bottles,
-hands partially occluding — not just a clean table. ~20% of shots should be "hard".
+## Voice-guided capture (the method that worked)
 
-## Workflow
-
-On a laptop with a display, use the interactive helper (VIS-002):
-
-```bash
-python scripts/capture.py --bottle tylenol --lighting bright --angle 0 --distance 0.5
-```
-
-It writes files to `datasets/raw/<bottle>/` with a structured name encoding the
-conditions, e.g. `tylenol__bright__a0__d05__0007.jpg`. Press **SPACE** to capture,
-**Q** to quit. Aim for ~12 shots per (lighting × angle × distance) cell.
-
-## Acceptance criteria
-
-- [ ] Fixed camera position documented (photo of rig committed to `docs/`).
-- [ ] Lighting / angle / distance checklist written (this file).
-- [ ] ≥600 images captured across the full matrix, including cluttered backgrounds.
-
-## Voice-guided capture (Pi rig)
-
-On the headless Pi rig, `scripts/capture_guided.py` runs the whole session hands-free:
-the robot's speaker announces each bottle / mark / position, waits, then shoots a burst
-while you slowly rotate the bottle. One run covers one lighting condition:
+On the headless Pi, `scripts/capture_guided.py` runs a whole session hands-free: the
+speaker announces each container, mark and position, waits, then shoots a burst while the
+operator slowly rotates the container. One run covers one lighting condition:
 
 ```bash
 .venv/bin/python -u scripts/capture_guided.py \
@@ -80,15 +63,19 @@ while you slowly rotate the bottle. One run covers one lighting condition:
     --lighting bright --position-wait 8
 ```
 
-Protocol learned the hard way (Jul 18 session): the table must be EMPTY except the one
-announced bottle — parked bottles anywhere in frame mean unlabeled instances that poison
-training. Spares live on the floor. Hands rotating the bottle during bursts are fine
-(realistic occlusion); the final tray stage is the only multi-bottle scene.
+The laptop helper (`scripts/capture.py --bottle <label> --lighting <bright|dim|mixed>
+--angle <deg> --distance <m>`) does the same with a display and SPACE to shoot; it writes
+`datasets/raw/<bottle>/<bottle>__<lighting>__a<angle>__d<dist>__NNNN.jpg`.
 
-## Dataset caveat: filenames are not ground truth
+## Two rules learned the hard way
 
-During the Jul 18 voice-guided capture, a few cells were shot with the WRONG bottle on the
-mark (voice-prompt mixups — e.g. "bayer" announced, mylanta placed). The Roboflow
-annotations (hand-labeled Aug 5) are the ground truth; the condition-encoded filenames
-are only *mostly* right. Never audit, split, or script against the filename's med prefix
-— go through the annotations.
+1. **The table is EMPTY except the one announced container.** Parked bottles anywhere in
+   frame are unlabelled instances that poison training. Spares live on the floor. Hands
+   rotating the container during bursts are fine (realistic occlusion); the tray stage is
+   the only multi-bottle scene — and because every other image is single-bottle, a crowd
+   of bottles *is* the `tray` class to the model (the three-bottle cap in the runbook).
+2. **Filenames are not ground truth.** A few cells were shot with the wrong container on
+   the mark (voice-prompt mix-ups: "bayer" announced, mylanta placed). The Roboflow
+   annotations are the ground truth; the condition-encoded filenames are only *mostly*
+   right. Never audit, split or script against the filename's prefix — go through the
+   annotations.
