@@ -7,7 +7,16 @@ the SQLite + on-disk schema that the capture instrument (DATA-001 / RES-001) wil
 It is also the seed of the **"datasheet for datasets"** required by DATA-004 — keep it in
 sync as the schema lands.
 
-> **Status:** Design v1 (schema proposed, not yet implemented).
+> **Status:** implemented and **switched off.** The schema (§4) and the clip layer (§5) exist —
+> `sessions` / `clips` tables in `mesa/data/database.py`, ring buffer, `.npz` writer, ST-GCN
+> adapter and recorder in `mesa/research/` — and the first clips were recorded on 2026-08-27.
+> Those clips showed the problem that pauses the work: the 40–45° top-down view the medication
+> detector needs starves MediaPipe, so a clip carries almost no skeleton (clip 1: 4 real frames
+> of 32; clip 2: 0 of 32), and both `clip_to_stgcn` and the wrist→bottle baseline read that
+> channel. `research.enabled` has been `false` in `config.yaml` since 2026-09-05 so live runs
+> stop banking unusable clips. Before re-enabling, one of three decisions is needed: reframe
+> the predictor on object trajectories, change the geometry (a second camera), or gate
+> recording on pose presence.
 > **Privacy invariant (Decision R1):** features only — pose/landmark/detection vectors, never
 > raw video — so the dataset can be opened and real-person collection stays consent-feasible.
 
@@ -38,7 +47,7 @@ accuracy. Single webcam + MediaPipe (2.5-D) will not match Kinect motion-capture
 | `taken` label source | `ComplianceTracker.observe()` logs `taken` (`mesa/engine/compliance.py`) | none — this is the RES-001 anchor |
 | Bottle bbox + class | `Detection{label, confidence, box=(x1,y1,x2,y2)}` (`mesa/vision/detector.py`) | bbox exists but is **not on the event bus** |
 | Full pose | `scripts/pose_live.py` extracts MediaPipe landmarks | keeps only a **named 2-D subset**; drops `z` + `visibility`. Research needs **all 33 × (x,y,z,visibility)** |
-| Storage | `events / medications / schedule` tables (`mesa/data/database.py`) | no `sessions` / `clips` tables, no clip files |
+| Storage | `events / medications / schedule` tables (`mesa/data/database.py`) | `sessions` / `clips` tables and the clip files (now implemented, §4–5) |
 
 **Implication:** the capture instrument cannot reuse the posture `Landmarks` dict — it must
 tap the **raw 33-landmark MediaPipe output** before posture classification discards `z` and
@@ -243,17 +252,20 @@ five core demos or the fall-detection FPS budget (Extension-Plan §6, Week 5 gat
 
 ---
 
-## 10. Implementation order (next steps)
+## 10. What exists, and what is still open
 
-1. **Schema migration** — add §4 tables + DAO methods to `mesa/data/database.py`; unit-test
-   the new methods with `:memory:`. *(Additive; existing tests stay green.)*
-2. **Feature record + clip I/O** — `mesa/research/` module: frame-record dataclass, ring
-   buffer, `.npz` writer, ST-GCN adapter. Pure/testable, no camera.
-3. **Plumb raw features** — tap full 33-landmark pose + bbox into the capture path behind
-   `research.enabled` (DATA-001 core).
-4. **Wire the anchor** — on `compliance.observe` → `taken`, dump the buffer as a labeled clip
-   (RES-001).
-5. **Review view** — Streamlit page on the existing dashboard (DATA-003).
+Done (Aug 2026): the §4 schema migration with DAO methods and `:memory:` tests; the
+`mesa/research/` module (frame record, ring buffer, `.npz` writer, ST-GCN adapter); the raw
+33-landmark tap and bbox plumbing behind `research.enabled`; the anchor on
+`compliance.observe → taken` that dumps the buffer as a labelled clip (`recorder.py`).
 
-Steps 1–2 are pure data-layer work with no hardware/camera dependency — the right place to
-start.
+Open, in order:
+
+1. **The pose-channel decision** (status block above). Nothing below is worth doing until a
+   clip can carry a skeleton.
+2. **Review view** — a Streamlit page over `clips.review_status` (DATA-003).
+3. **Baselines** (RES-003) and the lead-time evaluation (RES-004), on data that has pose.
+4. **Packaging + datasheet** (DATA-004), split by session.
+
+The project's longer-term direction (worked out outside this repository's public docs) takes a different route to
+in-home behaviour data and may supersede the intent-prediction line entirely.

@@ -35,6 +35,13 @@ Keep augmentations realistic for a tabletop camera — don't over-augment:
 - [ ] Augmentations configured; YOLOv8-format version exported.
 - [ ] Roboflow project link recorded in the M1 milestone / README.
 
+## Versions actually trained from
+
+- **version 1** — the evening round (924 source images) → the v1 arm (`best_v1_backup.pt`).
+- **version 4** — both rounds (924 + 308 daylight) → the deployed v2 arm (`best.pt`) and, with
+  in-notebook synthetic lighting, the v3syn arm. Its export is not kept locally; recover it with
+  `scripts/recover_roboflow_export.py`. Per-arm records: `docs/training/`.
+
 ## Lessons from the real runs (Aug 2026)
 - **Label Assist:** rejected in practice — the v1 model mislabeled everything in its own
   blind spots (that's exactly where new rounds live). All 1,232 images were hand-labeled.

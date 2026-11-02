@@ -1,212 +1,188 @@
-# MeSA 2.0 — Step-by-Step Implementation Plan
+# MeSA 2.0 — Ticket Board
 
-> **STATUS (2026-08-09):** Weeks 1–6 complete and live-verified (4 of 5 core demos:
-> MED, LOG, FALL, VOICE; ESCALATE needs one live run — ntfy topic now set). A research
-> extension (domain-shift study) completed Aug 8–9: docs/eval/. Remaining:
-> ESCALATE live test, systemd + soak (HW-002/003, ENG-007), dashboard-on-LAN check
-> (DASH-002), on-Pi servo/OLED verification (HW-004–006), demo video + rehearsal
-> (Week 10).
+> **STATUS (November 2026):** working prototype. All five core demos (MED, LOG, FALL,
+> VOICE, ESCALATE) ran live on the Pi in one continuous run on 2026-10-24
+> (`docs/eval/events_archive_2026-10-24.csv`). The research extension — a two-site
+> domain-shift study with statistics — is complete (`docs/eval/`). Open: systemd
+> auto-start (HW-003), on-Pi servo/OLED verification (HW-004–006), the tray-class
+> retraining experiment (VIS-007), and open-vocabulary STT on the Pi (VOX-008).
 
-Derived from `mesa-2_0-project-plan*.pdf`. This is the working build guide: do the steps
-in order, close each ticket only when its **acceptance criteria (AC)** are met, and commit
-on a feature branch per ticket.
+Derived from the 10-week project plan. Tickets follow `AREA-###` with labels `vision`
+`voice` `engine` `hw` `infra` `docs` `research`. A ticket closes only when its
+acceptance criteria (AC) are met, with the evidence named. Work lands via feature branch
+and PR.
 
-- **Target:** working tabletop prototype by ~Aug 23, 2026 (10 weeks from Jun 15).
-- **Budget:** ~12 hrs/week (~120–150 hrs total).
-- **Golden rule:** build on the laptop first; the Pi is only truly required from Week 7.
-- **Labels:** `vision` `voice` `engine` `hw` `infra` `docs`.
-
----
-
-## Phase 0 — Repo foundation (do this first, before Week 1 tickets)
-
-This scaffolding is what the plan assumes already exists ("Layer 1 software scaffolded").
-The repo currently has only `README.md` + `CLAUDE.md`, so stand it up now.
-
-- [ ] **Create the project layout:**
-  ```
-  mesa-ai-robot/
-  ├── mesa/                  # package source
-  │   ├── __init__.py
-  │   ├── vision/            # detection + pose
-  │   ├── audio/             # STT/TTS
-  │   ├── engine/            # state machine, escalation, compliance
-  │   ├── data/              # SQLite schema + DAO
-  │   ├── hardware/          # Pi-only: servos, OLED (import-isolated)
-  │   └── dashboard/         # Streamlit app
-  ├── tests/                 # pytest
-  ├── docs/                  # this file, eval reports, journal.md
-  ├── config.yaml            # all thresholds live here
-  ├── requirements.txt       # laptop deps
-  ├── requirements-pi.txt    # Pi-only deps
-  └── main.py                # orchestrator entry point
-  ```
-- [ ] Create `venv`, add pinned `requirements.txt` (opencv-python, ultralytics, mediapipe, vosk, pyttsx3, sounddevice, streamlit, requests, pyyaml, pytest).
-- [ ] Add a trivial unit test + `pytest` config so `pytest` runs green from day one.
-- [ ] Stub `config.yaml` with placeholder thresholds (confidence, timeouts, schedule).
-- [ ] First commit on a feature branch.
+- **Plan:** 10 weeks from Jun 15, 2026 (~12 h/week), laptop first, Pi from Week 7.
+- **Evidence convention:** each closed ticket names the file, figure or notebook entry that
+  proves it. "Live-verified" means it ran on the Pi with real camera, mic and speaker.
 
 ---
 
-## Week 1 (Jun 15–21) — Dataset & Dev Environment
-**Milestone M1: annotated dataset v1 uploaded to Roboflow.**
+## Phase 0 — Repo foundation ✅
 
-- [x] **INFRA-001** (2h) — Dev environment on laptop: repo cloned, venv with pinned `requirements.txt`, existing unit tests pass.
-- [ ] **INFRA-002** (1h) — Create GitHub Issues board: all tickets entered with labels + milestones.
-- [x] **VIS-001** (2h) — Capture rig + photo protocol: fixed camera position documented; lighting/angle/distance checklist written.
-- [x] **VIS-002** (5h) — Capture ≥600 images across 6 bottles: 3 lighting conditions × 3 angles × 3 distances, incl. cluttered backgrounds.
-- [x] **VIS-003** (3h) — Annotate in Roboflow: all images boxed + labeled; 70/20/10 train/val/test split; augmentations configured.
+- [x] Project layout (`mesa/{vision,audio,engine,data,hardware,research,dashboard}`, `tests/`,
+      `docs/`, `config.yaml`, `main.py`, `requirements.txt`, `requirements-pi.txt`).
+- [x] `scripts/setup_env.sh` creates the venv on Python 3.11/3.12 (not 3.13 — the pinned
+      mediapipe has no wheel) and verifies imports.
+- [x] `pytest` green from day one; 363 tests at the time of writing.
+- [x] `config.yaml` holds every threshold (INFRA-003).
 
-**Proof:** Roboflow project link.
+## Week 1 — Dataset & dev environment ✅ (M1)
 
----
+- [x] **INFRA-001** Dev environment on laptop.
+- [x] **INFRA-002** Issue board: tickets tracked in this file.
+- [x] **VIS-001** Capture rig + protocol → `docs/capture-protocol.md`.
+- [x] **VIS-002** Image capture: 924 (Jul 18, voice-guided) + 308 (Aug 7, daylight) source
+      images across 8 medications → `datasets/README.md`.
+- [x] **VIS-003** Roboflow annotation, all 1,232 images hand-labelled, 70/20/10 split →
+      `docs/roboflow-setup.md`.
 
-## Week 2 (Jun 22–28) — Train & Evaluate Detector
-**Milestone M2: fine-tuned YOLOv8n ≥90% mAP@50 on val set.**
+## Week 2 — Train & evaluate detector ✅ (M2)
 
-- [x] **VIS-004** (4h) — Train YOLOv8n on Colab: training notebook in repo; `best.pt` exported; ≥90% mAP@50.
-- [x] **VIS-005** (2h) — Evaluation report: confusion matrix + per-class precision/recall committed to `/docs`; failure cases listed.
-- [x] **VIS-006** (4h) — Live inference: `detect_live.py` shows boxes + confidence ≥5 FPS on laptop; "unknown bottle" path when confidence < threshold.
-- [ ] **VIS-007** (2h) — Hard-negative round: +50 failure-case images added; retrain if mAP < 90%.
+- [x] **VIS-004** YOLOv8n on Colab; held-out **test mAP@50 0.953** (v1, Aug 6) →
+      `docs/eval/eval-report-v1.md`; per-arm records in `docs/training/`.
+- [x] **VIS-005** Evaluation report with confusion matrix and per-class P/R → `docs/eval/`.
+- [x] **VIS-006** Live inference with the unknown-bottle path → `scripts/detect_live.py`,
+      `mesa/vision/detector.py`.
+- [ ] **VIS-007** Hard-negative / tray-class round — **open, deliberately deferred.** The
+      `tray` class, learned from a handful of clutter shots, outcompetes individual bottles
+      once four or more appear together (measured 2026-09-07: 1 bottle 0.75 · 2: 0.73/0.72 ·
+      3: 0.73/0.69/0.61 · 4: 0.74/0.67/0.65/**0.44 fails**; 8 clustered → `tray 0.61`, zero
+      medications). Group scenes scored 0/12 in every lighting condition of the study.
+      **Prediction on record:** remove or rebalance `tray`, retrain, re-run the bottle-count
+      ladder; without the tray prior, four or more bottles detect where they now collapse.
+      Not run yet because every measured number in `docs/eval/` describes the current
+      weights; a new model re-opens all of it.
 
-**Proof:** eval report in repo.
+## Week 3 — Compliance tracking & database ✅ (M3)
 
----
+- [x] **ENG-001** SQLite schema + DAO (`events`, `medications`, `schedule`; plus `sessions`,
+      `clips` for the research layer) → `mesa/data/database.py`.
+- [x] **ENG-002** Per-bottle presence state machine, 3 s debounce → `mesa/engine/presence.py`.
+- [x] **ENG-003** `taken` rule: absent ≥ 10 s then returned → `mesa/engine/compliance.py`.
+      Live-verified Aug 7 (first real `taken`), Oct 24 (`taken advil` 17:16:22, absent 21 s).
+- [x] **DASH-001** Streamlit dashboard: today's doses, event table → `mesa/dashboard/app.py`.
 
-## Week 3 (Jun 29–Jul 5) — Compliance Tracking & Database
-**Milestone M3: bottle removed/returned → event logged in SQLite.**
+## Week 4 — Voice assistant ✅ (M4)
 
-- [x] **ENG-001** (3h) — SQLite schema + data access module: `events`, `medications`, `schedule` tables; CRUD functions; pytest coverage.
-- [x] **ENG-002** (4h) — Per-bottle presence state machine: `present → absent → returned`; debounced 3 s so hand occlusion doesn't false-trigger.
-- [x] **ENG-003** (2h) — "Medication taken" rule: absent ≥10 s then returned → `taken` event with timestamp + med name.
-- [x] **DASH-001** (3h) — Extend Streamlit dashboard: today's meds, taken/missed status, event-history table reading live from SQLite.
+- [x] **VOX-001** Mic capture + Vosk STT loop → `mesa/audio/stt.py`, `worker.py`.
+- [x] **VOX-002** Intent parser (`NEXT_MED`, `DID_I_TAKE`, `HELP`, `DATE_TIME`, `OKAY`),
+      unit-tested → `mesa/audio/intents.py`.
+- [x] **VOX-003** Intent → DB → spoken answer (pyttsx3) → `mesa/audio/assistant.py`.
+- [x] **VOX-004** HELP → ntfy push → `mesa/alerts/ntfy.py`.
+- [x] **VOX-005** Voice robustness. Measured wake-word rate was ~70 % in a quiet room
+      (`docs/voice-grid-sessions.md`), failing by homophone substitution, so the wake word was
+      replaced by **push-to-talk** (VOX-006, Sept 18) and a constrained Vosk grammar
+      (VOX-007). Live-verified Oct 24: both scripted commands answered on the first press.
+- [x] **VOX-006** Push-to-talk trigger (keyboard / GPIO / event) → `config.yaml`
+      `voice.push_to_talk`. The check-in after "Are you okay?" opens its own 30 s window
+      with no press.
+- [x] **VOX-007** Vocabulary constraint + spoken aliases for names outside the Vosk lexicon
+      (`scripts/check_vocabulary.py`, `voice.med_aliases`).
+- [ ] **VOX-008** Open-vocabulary STT (faster-whisper, `voice.stt_engine: whisper-tiny`) —
+      coded and tested on the laptop; **not yet tried on the Pi**. Keep Vosk until it is.
 
-> **⏰ Order the Pi 5 bundle (H1–H4) this week** so it arrives before Week 5/7.
+## Week 5 — Fall detection + Pi bring-up ✅ (M5)
 
-**Proof:** dashboard shows a live "taken" event.
+- [x] **VIS-008** MediaPipe Pose live → `scripts/pose_live.py`.
+- [x] **VIS-009** Posture classifier (torso angle, shoulder/hip height, inverted-torso rule,
+      static fallback chain for lying) → `mesa/vision/posture.py`, `pose_estimator.py`.
+- [x] **VIS-010** Lying > 30 s → `possible_fall` → spoken check-in; torso-visibility gate.
+      Live-verified Sept 5 (208/208 frames `lying` on staged poses), Oct 24.
+- [x] **HW-001** Pi 5 set up, camera, repo deployed, FPS benchmarked (`scripts/benchmark.py`).
 
----
+## Week 6 — Decision engine integration ✅ (M6)
 
-## Week 4 (Jul 6–12) — Voice Assistant
-**Milestone M4: 4 voice commands working end-to-end on laptop.**
+- [x] **ENG-004** Event bus + orchestrator: `main.py --demo` (synthetic) and `--live`.
+- [x] **ENG-005** Escalation L1 → L2 (60 s) → L3 (120 s), simulated-time tests →
+      `mesa/engine/escalation.py`. Live-verified with both pushes on a phone: Sept 5, Sept 21,
+      Oct 24 (`possible_fall` 17:19:13 → L2 17:20:13 → L3 17:21:14).
+- [x] **ENG-006** Inactivity monitor (1 h window) → `mesa/engine/inactivity.py`.
+- [x] **INFRA-003** All thresholds in `config.yaml`.
 
-- [x] **VOX-001** (4h) — Mic capture + Vosk STT loop: continuous transcription; wake word "MeSA" gates commands.
-- [x] **VOX-002** (3h) — Intent parser: keyword/regex intents `NEXT_MED`, `DID_I_TAKE`, `HELP`, `DATE_TIME`; unit-tested on 20 phrasings each.
-- [x] **VOX-003** (3h) — Intent → DB → spoken answer: "Did I take Vitamin D?" answers correctly from real `events` via pyttsx3.
-- [x] **VOX-004** (2h) — HELP intent → alert stub: "Call for help" sends an ntfy.sh push.
+## Week 7 — Full system on the Pi (M7, partial)
 
-> Keep STT behind one module so Vosk can be swapped for whisper-tiny if accuracy is poor.
+- [x] **HW-002** Full stack on the Pi: 640×480, detection every 3rd frame, pose every frame;
+      `requirements-pi.txt`. Live since Aug 7.
+- [ ] **HW-003** systemd auto-start — **open.** `deploy/mesa.service` + `install_pi.sh` exist,
+      but the unit launches `main.py` without `--live`, and keyboard push-to-talk needs a
+      TTY, which systemd does not provide. Needs a GPIO button (`push_to_talk.source: gpio`)
+      or a dashboard "Talk" button driving the event trigger first. Until then MeSA is
+      started by hand over SSH (`docs/test-plan.md` §0).
+- [x] **ENG-007** Soak: decision engine ran 3.02 M synthetic events over a simulated week,
+      peak memory 19.1 KiB (`docs/eval/soak_results.md`). An on-robot multi-hour home soak
+      has not been run.
+- [x] **DASH-002** Dashboard on the LAN at `:8501`, reached from a phone (Sept 6 over a
+      hotspot, Oct 24 at home).
 
-**Proof:** screen recording.
+## Week 8 — Robotic personality (M8, stretch — not verified on hardware)
 
----
+- [ ] **HW-004** PCA9685 + pan-tilt assembly — driver coded (`mesa/hardware/servos.py`),
+      hardware not assembled.
+- [ ] **HW-005** Person-tracking head — control law coded and unit-tested
+      (`mesa/hardware/tracking.py`); not run on a servo.
+- [ ] **HW-006** OLED emotion display — coded (`mesa/hardware/oled.py`, `emotions.py`); not
+      run on a display. Null drivers keep everything runnable without hardware.
+- [x] **INFRA-004** Demo video: setup tour (Aug 9, `docs/media/`) and the Oct 24 live run.
 
-## Week 5 (Jul 13–19) — Fall Detection + Pi Bring-up
-**Milestone M5: standing/sitting/lying classified live; Pi 5 running the detector.**
+## Week 9 — Accuracy hardening ✅ (M9)
 
-- [x] **VIS-008** (2h) — MediaPipe Pose integration: 33 keypoints rendered live ≥10 FPS (laptop).
-- [x] **VIS-009** (5h) — Posture classifier: torso-angle + hip/shoulder-height rules classify standing/sitting/lying ≥90% accuracy on a 50-clip test set.
-- [x] **VIS-010** (2h) — Lying-duration trigger: lying >30 s fires `possible_fall`; spoken "Are you okay?" check-in.
-- [x] **HW-001** (3h) — Pi 5 setup: Pi OS 64-bit, SSH, camera working, repo deployed, YOLO+pose FPS benchmarked and recorded.
+- [x] **VIS-011** Robustness at deployment lighting: threshold 0.50 → 0.45 (Aug 7), daylight
+      retrain (v2), camera-control locking in `config.yaml` (`vision.camera`), the
+      eight-condition study. **Measured, not fixed:** detection spans the lighting envelope
+      (see `docs/eval/`); the mitigation that works is the LED lamp and a fixed geometry.
+- [x] **STRETCH-001** Schedule generator from a CSV prescription list →
+      `scripts/import_schedule.py`, `mesa/engine/schedule_gen.py`.
 
-> **⚠️ Safety:** test falls with staged poses on cushions only. Document "assistive aid, not a medical device."
+## Week 10 — Demo, docs & showcase ✅ (M10)
 
-**Proof:** posture demo clip + Pi FPS benchmark.
+- [x] **DOC-001** README with architecture figure, results, setup.
+- [x] **DOC-002** Final demo: full five-act run recorded 2026-10-24.
+- [x] **DOC-003** Abstract and poster (from the study).
+- [x] **ENG-008** Dress rehearsals: Sept 7 (home), Sept 21 (home), Oct 24 run 1 (rehearsal)
+      then run 2 (clean).
 
----
+## Research extension (added Jun 21) — measured, capture paused
 
-## Week 6 (Jul 20–26) — Decision Engine Integration
-**Milestone M6: all subsystems running together from one entry point (laptop).**
-
-- [x] **ENG-004** (5h) — Event bus + orchestrator: `main.py` launches vision, audio, engine threads; all events flow through one queue.
-- [x] **ENG-005** (4h) — Escalation state machine: L1 check-in → 60 s no response → L2 ntfy → no response → L3 caregiver alert; fully unit-tested with simulated time.
-- [x] **ENG-006** (2h) — Inactivity monitor: no person/motion for configurable window (default 1 h) → escalation L1.
-- [x] **INFRA-003** (1h) — Config file: all thresholds (timeouts, confidence, schedule) in `config.yaml`.
-
-> **⏰ Order servos, PCA9685, pan-tilt kit, OLED (H8–H11)** this week.
-
-**Proof:** one-command launch, all events flowing.
-
----
-
-## Week 7 (Jul 27–Aug 2) — Full System on Raspberry Pi
-**Milestone M7: end-to-end demo runs on the Pi unattended for 2+ hours.**
-
-- [ ] **HW-002** (5h) — Port full stack to Pi: all Week-6 functionality; `requirements-pi.txt`; perf tuning (frame skipping, resolution) to keep pose ≥5 FPS.
-- [ ] **HW-003** (2h) — systemd service: MeSA auto-starts on boot; logs to file; survives reboot.
-- [ ] **ENG-007** (4h) — Soak test + bug bash: 2-hour continuous run; no crashes; memory stable; issues filed and fixed.
-- [ ] **DASH-002** (1h) — Dashboard reachable on LAN: phone/laptop on same Wi-Fi can view it served from the Pi.
-
-**Proof:** systemd logs.
-
----
-
-## Week 8 (Aug 3–9) — Robotic Personality
-**Milestone M8: servo head tracks person; OLED shows emotion states.**
-*(If hardware is delayed, swap Week 8 ↔ Week 9.)*
-
-- [ ] **HW-004** (3h) — PCA9685 + pan-tilt assembly: camera on pan-tilt; servos sweep via script.
-- [ ] **HW-005** (4h) — Face/person tracking head: head keeps detected person centered (proportional control); no jitter/oscillation.
-- [ ] **HW-006** (3h) — OLED emotion display: idle / alert / greeting states driven by engine events.
-- [ ] **INFRA-004** (1h) — Demo video #1: 60–90 s clip of med detection + fall check-in for portfolio.
-
-**Proof:** tracking demo clip.
-
----
-
-## Week 9 (Aug 10–16) — Accuracy Hardening & Stretch Goals
-**Milestone M9: demo-grade reliability; one stretch goal landed.**
-
-- [x] **VIS-011** (4h) — Detector robustness pass: test at demo-location lighting; retrain/threshold-tune until MED-DEMO criteria met.
-- [ ] **VOX-005** (3h) — Voice robustness pass: 90%+ command success at 1–2 m in normal room noise; mis-recognition fallback ("Sorry, say again?").
-- [ ] **STRETCH-001** (5h) — Pick **ONE**: schedule generator (CSV prescription list → reminder schedule) **OR** family dashboard auth view **OR** face-recognition greeting. Chosen feature demo-able.
-
-> Stretch goals **only** in Week 9, **only one**, and **only if M7 is done**.
-
-**Proof:** robustness test results.
-
----
-
-## Week 10 (Aug 17–23) — Demo, Docs & Showcase Package
-**Milestone M10: working prototype + complete portfolio package.**
-
-- [ ] **DOC-001** (3h) — README overhaul: architecture diagram, setup guide, demo GIFs, results table (mAP, posture accuracy, FPS).
-- [ ] **DOC-002** (3h) — Final demo video: 3–4 min, all 5 Definition-of-Done demos shown live, narrated.
-- [ ] **DOC-003** (3h) — Project abstract + poster draft: 1-page abstract (problem, system, results, impact).
-- [ ] **ENG-008** (2h) — Dress rehearsal: full scripted demo run twice without intervention; fallback recorded video ready.
-
-**Proof:** video, README, abstract.
+- [x] **DATA-001 / RES-001** Pre-event feature capture: ring buffer, `.npz` clips, `sessions`
+      and `clips` tables → `mesa/research/`, `docs/research-dataset-design.md`.
+- [x] **RES-004 (vision)** The domain-shift study: self-administered evaluation
+      (`scripts/eval_capture.py`), scoring (`eval_analyze.py`), statistics (`eval_stats.py`),
+      figures (`eval_figures.py`, `eval_site_figures.py`); two sites.
+- [x] **RES-004 (voice)** Voice-reliability grid: four cells → `docs/voice-grid-sessions.md`.
+- [ ] **RES-002 / RES-003** Hands channel, intent baselines — **paused.** The top-down
+      geometry MED needs starves MediaPipe, so clips carry almost no skeleton;
+      `research.enabled` is `false` since Sept 5 (`config.yaml`).
 
 ---
 
 ## Milestone summary
 
-| Week | Milestone | Proof |
-|------|-----------|-------|
-| 1 | M1 Dataset v1 | Roboflow project link |
-| 2 | M2 Detector ≥90% mAP@50 | Eval report in repo |
-| 3 | M3 Compliance logging | Dashboard shows live "taken" event |
-| 4 | M4 Voice commands ×4 | Screen recording |
-| 5 | M5 Fall detection + Pi alive | Posture demo clip; Pi FPS benchmark |
-| 6 | M6 Integrated system (laptop) | One-command launch, all events flowing |
-| 7 | M7 Full stack on Pi, 2 h soak | systemd logs |
-| 8 | M8 Servo head + OLED | Tracking demo clip |
-| 9 | M9 Hardened + 1 stretch goal | Robustness test results |
-| 10 | M10 Showcase package | Video, README, abstract |
+| Week | Milestone | Evidence |
+|------|-----------|----------|
+| 1 | M1 Dataset v1 | `datasets/README.md`, Roboflow project |
+| 2 | M2 Detector ≥ 0.90 mAP@50 | `docs/eval/eval-report-v1.md` (0.953) |
+| 3 | M3 Compliance logging | live `taken` events, Aug 7 and Oct 24 |
+| 4 | M4 Voice commands | live Oct 24 (push-to-talk) |
+| 5 | M5 Fall detection + Pi alive | staged-pose runs Sept 5, Oct 24 |
+| 6 | M6 Integrated system | `main.py --live` |
+| 7 | M7 Full stack on Pi | live since Aug 7; systemd still open |
+| 8 | M8 Servo head + OLED | coded; not verified on hardware |
+| 9 | M9 Hardened | `docs/eval/` |
+| 10 | M10 Showcase package | README, Oct 24 recording |
 
-## Risks & mitigations
+## Risks — how they played out
 
-| Risk | Likelihood | Mitigation |
-|------|-----------|------------|
-| Pi 5 too slow for YOLO + pose together | Medium | Frame skipping, 640×480, YOLOv8n only; fallback: detect on med-station ROI only |
-| Pi shipping delay | Medium | Weeks 1–4 & 6 are laptop-only; Pi truly needed from Week 7 |
-| Vosk accuracy poor | Medium | Swap to whisper-tiny (offline) — STT abstracted behind one module |
-| Dataset overfits to home lighting | High | Hard-negative round (VIS-007) + Week 9 hardening at demo location |
-| Scope creep (stretch goals) | High | Stretch only in Week 9, only one, only if M7 done |
-| Servo/I2C wiring eats time | Medium | Personality features isolated to Week 8; demos fine without them |
+| Risk | What happened |
+|------|---------------|
+| Pi 5 too slow for YOLO + pose | Fine at 640×480 with detection every 3rd frame. |
+| Vosk accuracy poor | True for the wake word (~70 %); solved by push-to-talk + grammar, not by swapping engines. Whisper remains an option (VOX-008). |
+| Dataset overfits to home lighting | The central research finding: measured across 8 conditions and 2 rooms; mitigated by a lamp and fixed geometry rather than by data. |
+| Servo/I2C wiring eats time | Deferred entirely; the demos never needed it. |
+| One camera, two geometries | Found late: the top-down MED view cannot see the floor, so FALL needs the camera re-aimed at the fall zone, and the research clips carry no skeleton. A product needs a second camera or a wider field of view. |
 
 ## Weekly operating rhythm
 
-- **Start of week (30 min):** review milestone, pick tickets, move to "In Progress."
-- **Each session:** commit to a feature branch; close tickets with the AC checklist.
-- **End of week (30 min):** record a 30-second progress clip (portfolio montage), write a 3-line log in `docs/journal.md`.
+- Commit to a feature branch; close tickets with the AC and the evidence.
+- End every working day with an entry in the engineering notebook.
+- After any change to a headline number, re-check every place it is quoted.
