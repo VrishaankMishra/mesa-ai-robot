@@ -80,7 +80,7 @@ operator time per site.*
 
 ## Research Paper & Figures
 
-- **Paper:** [docs/paper/domain-shift-paper.md](docs/paper/domain-shift-paper.md) — the full study.
+- **Study write-up:** in progress (two-site, author's own text); the data, statistics and figures it draws on are under `docs/eval/`.
 - **Data:** [docs/eval/domain_shift_results.csv](docs/eval/domain_shift_results.csv) (site A) ·
   [docs/eval/domain_shift_results_family_room.csv](docs/eval/domain_shift_results_family_room.csv) (site B).
 - **Cross-site statistics:** [docs/eval/site_stats.md](docs/eval/site_stats.md) (Wilson and
