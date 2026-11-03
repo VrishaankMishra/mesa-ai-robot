@@ -5,7 +5,7 @@ survive regeneration. Numbers are in the tables; this file says which of them to
 after the fact from whole frames (`source=retro_frame00`); camera gain/exposure were not
 recorded then. `evening_dim` there was captured at 21:11 with only computer screens lit.
 
-**`family_room`** (Oct 19 and 22, 2026): grey folding table, patterned rug behind the far
+**`family_room`** (Oct 19 and 23, 2026): grey folding table, patterned rug behind the far
 mark, window to the camera's left; LED lamp base taped at the table's near-left. Camera on
 auto throughout (gain/exposure in `scene_luminance.csv`). Conditions and their standing:
 
